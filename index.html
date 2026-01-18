@@ -274,21 +274,35 @@
             return;
         }
         
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Hawaii, USA')}&limit=5&addressdetails=1`;
+        // Hawaii bounding box: viewbox=west,north,east,south
+        // bounded=1 restricts results to this box
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Hawaii')}&limit=10&addressdetails=1&viewbox=-160.5,22.5,-154.5,18.5&bounded=1`;
+        
+        console.log('Fetching autocomplete for:', query);
         
         try {
             const response = await fetch(url);
             const data = await response.json();
             
+            console.log('Autocomplete results:', data);
+            
+            // Filter to only show Hawaii results (double-check)
+            const hawaiiResults = data.filter(item => {
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+                return lat >= 18.5 && lat <= 22.5 && lon >= -160.5 && lon <= -154.5;
+            });
+            
             const resultsDiv = document.getElementById('autocomplete-results');
             resultsDiv.innerHTML = '';
             
-            if (data.length === 0) {
+            if (hawaiiResults.length === 0) {
                 resultsDiv.style.display = 'none';
                 return;
             }
             
-            data.forEach(item => {
+            // Show max 5 results
+            hawaiiResults.slice(0, 5).forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'autocomplete-item';
                 div.textContent = item.display_name;
@@ -461,11 +475,14 @@
     }
     
     async function handleSearch(providedLat = null, providedLng = null) {
+        console.log('handleSearch called with:', providedLat, providedLng);
+        
         let coords;
         
         if (providedLat && providedLng) {
             // From autocomplete
             coords = { lat: parseFloat(providedLat), lng: parseFloat(providedLng) };
+            console.log('Using autocomplete coords:', coords);
         } else {
             // From search button
             const address = document.getElementById('address-input').value.trim();
@@ -475,11 +492,14 @@
                 return;
             }
             
+            console.log('Geocoding address:', address);
             coords = await geocodeAddress(address);
             if (!coords) return;
+            console.log('Geocoded to:', coords);
         }
         
         const latlng = L.latLng(coords.lat, coords.lng);
+        console.log('LatLng object:', latlng);
         
         // Minimize search bar after first search
         if (!hasSearched) {
@@ -499,12 +519,14 @@
         let countyInfo = null;
         let countyName = null;
         
+        console.log('Checking county districts...');
         // Check which county
         for (const {layer, data, county} of geoJsonLayers.county) {
             const idField = county === 'maui' ? 'districtnu' : 'objectid';
             const result = findDistrictByPoint(latlng, data, idField, county);
             
             if (result) {
+                console.log('Found county:', county, 'District:', result.districtId);
                 countyName = county;
                 const districtData = sheetData[county]?.[result.districtId];
                 countyInfo = districtData || { mohoAina: '' };
@@ -514,21 +536,27 @@
         
         // Check House
         let houseInfo = null;
+        console.log('Checking house districts...');
         if (geoJsonLayers.house) {
             const result = findDistrictByPoint(latlng, geoJsonLayers.house.data, 'SLDST');
             if (result) {
+                console.log('Found house district:', result.districtId);
                 houseInfo = sheetData.house?.[result.districtId] || { mohoAina: '' };
             }
         }
         
         // Check Senate
         let senateInfo = null;
+        console.log('Checking senate districts...');
         if (geoJsonLayers.senate) {
             const result = findDistrictByPoint(latlng, geoJsonLayers.senate.data, 'SLDUST');
             if (result) {
+                console.log('Found senate district:', result.districtId);
                 senateInfo = sheetData.senate?.[result.districtId] || { mohoAina: '' };
             }
         }
+        
+        console.log('District results:', { countyInfo, houseInfo, senateInfo });
         
         // Create popup
         const popupContent = createPopupContent(countyInfo, houseInfo, senateInfo);
