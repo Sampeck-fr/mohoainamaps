@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hawaii Maps</title>
+    <title>Moho ʻĀina Lookup</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -11,147 +11,476 @@
     <style>
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
             font-family: Arial, sans-serif;
         }
         
-        .map-container {
-            margin-bottom: 30px;
+        #search-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
         
-        .map {
-            height: 500px;
-            width: 100%;
+        #address-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
             border: 2px solid #333;
+            border-radius: 4px;
         }
         
-        h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
+        #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #3388ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        #search-button:hover {
+            background: #2266cc;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .popup-content {
+            width: 320px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .popup-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .rep-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .rep-oval {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 4px solid;
+            background-size: cover;
+            background-position: center;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="35" r="20" fill="%23999"/><path d="M 20 100 Q 20 70 50 70 Q 80 70 80 100 Z" fill="%23999"/></svg>');
+            flex-shrink: 0;
+        }
+        
+        .has-moho {
+            border-color: #28a745;
+        }
+        
+        .no-moho {
+            border-color: #dc3545;
+        }
+        
+        .rep-info {
+            margin-left: 15px;
+            flex-grow: 1;
+        }
+        
+        .rep-office {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .rep-name {
+            font-size: 13px;
+            color: #666;
         }
     </style>
 </head>
 <body>
 
-<h1>Hawaii District Maps</h1>
-
-<!-- Map 1: County Councils -->
-<div class="map-container">
-    <h2>County Council Districts</h2>
-    <div id="map1" class="map"></div>
+<div id="search-container">
+    <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
+    <button id="search-button">Search</button>
 </div>
 
-<!-- Map 2: House -->
-<div class="map-container">
-    <h2>State House Districts</h2>
-    <div id="map2" class="map"></div>
-</div>
-
-<!-- Map 3: Senate -->
-<div class="map-container">
-    <h2>State Senate Districts</h2>
-    <div id="map3" class="map"></div>
-</div>
+<div id="map"></div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // ============ STYLING ============
+    // ============ CONFIGURATION ============
     
-    function styleFeature(feature) {
-        return {
-            fillColor: '#3388ff',    // Blue fill
-            fillOpacity: 0.5,
-            color: '#333',           // Dark border
-            weight: 2,
-            opacity: 1
-        };
+    // Google Sheets published CSV URLs
+    const SHEET_URLS = {
+        senate: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1358067559&single=true&output=csv',
+        house: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=0&single=true&output=csv',
+        hawaii: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv',
+        maui: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1505508928&single=true&output=csv',
+        honolulu: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=978802498&single=true&output=csv',
+        kauai: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=913383944&single=true&output=csv'
+    };
+    
+    // ============ GLOBAL VARIABLES ============
+    
+    let map;
+    let geoJsonLayers = {
+        county: [],
+        house: null,
+        senate: null
+    };
+    let sheetData = {};
+    let currentMarker = null;
+    
+    // ============ INITIALIZE MAP ============
+    
+    const hawaiiCenter = [20.7984, -156.3319];
+    map = L.map('map').setView(hawaiiCenter, 8);
+    
+    const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    L.tileLayer(satelliteLayer, { 
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 18 
+    }).addTo(map);
+    
+    // ============ UTILITY FUNCTIONS ============
+    
+    function trimLeadingZeros(str) {
+        if (!str) return str;
+        return String(str).replace(/^0+/, '') || '0';
     }
     
-    // ============ POPUP FUNCTION ============
+    function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const data = {};
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const id = trimLeadingZeros(values[0]);
+            data[id] = {
+                name: values[1] || '',
+                mohoAina: values[2] || ''
+            };
+        }
+        
+        return data;
+    }
     
-    function onEachFeature(feature, layer) {
-        if (feature.properties) {
-            let popupContent = '<div style="max-width: 250px;">';
+    // ============ LOAD GOOGLE SHEETS DATA ============
+    
+    async function loadSheetData() {
+        try {
+            const promises = Object.entries(SHEET_URLS).map(async ([key, url]) => {
+                const response = await fetch(url);
+                const text = await response.text();
+                sheetData[key] = parseCSV(text);
+            });
             
-            // Display all properties
-            for (let key in feature.properties) {
-                let value = feature.properties[key];
-                if (value !== null && value !== '') {
-                    popupContent += `<b>${key}:</b> ${value}<br>`;
-                }
-            }
-            
-            popupContent += '</div>';
-            layer.bindPopup(popupContent);
+            await Promise.all(promises);
+            console.log('Sheet data loaded:', sheetData);
+        } catch (error) {
+            console.error('Error loading sheet data:', error);
         }
     }
     
-    // ============ INITIALIZE MAPS ============
+    // ============ LOAD GEOJSON LAYERS ============
     
-    const hawaiiCenter = [20.7984, -156.3319];
-    const defaultZoom = 8;
+    async function loadGeoJsonLayers() {
+        // Load county layers
+        const countyFiles = [
+            { file: 'Hawaii County.geojson', county: 'hawaii' },
+            { file: 'Maui County.geojson', county: 'maui' },
+            { file: 'Honolulu County.geojson', county: 'honolulu' },
+            { file: 'Kauai County.geojson', county: 'kauai' }
+        ];
+        
+        for (const {file, county} of countyFiles) {
+            try {
+                const response = await fetch(file);
+                const data = await response.json();
+                const layer = L.geoJSON(data, {
+                    style: { fillOpacity: 0, color: '#333', weight: 1 }
+                });
+                geoJsonLayers.county.push({ layer, data, county });
+            } catch (error) {
+                console.error(`Error loading ${file}:`, error);
+            }
+        }
+        
+        // Load House
+        try {
+            const response = await fetch('House.geojson');
+            const data = await response.json();
+            geoJsonLayers.house = {
+                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                data
+            };
+        } catch (error) {
+            console.error('Error loading House:', error);
+        }
+        
+        // Load Senate
+        try {
+            const response = await fetch('Senate.geojson');
+            const data = await response.json();
+            geoJsonLayers.senate = {
+                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                data
+            };
+        } catch (error) {
+            console.error('Error loading Senate:', error);
+        }
+    }
     
-    // Satellite basemap
-    const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-    const satelliteAttribution = 'Tiles &copy; Esri';
+    // ============ FIND DISTRICT BY POINT ============
     
-    // Create Map 1
-    const map1 = L.map('map1').setView(hawaiiCenter, defaultZoom);
-    L.tileLayer(satelliteLayer, { attribution: satelliteAttribution, maxZoom: 18 }).addTo(map1);
+    function findDistrictByPoint(latlng, geoJsonData, idField, county = null) {
+        const point = [latlng.lng, latlng.lat];
+        
+        for (const feature of geoJsonData.features) {
+            if (leafletPip.pointInLayer(point, L.geoJSON(feature), true).length > 0) {
+                let districtId = feature.properties[idField];
+                
+                // Special handling for Maui County
+                if (county === 'maui' && idField === 'objectid') {
+                    districtId = feature.properties['districtnu'];
+                }
+                
+                districtId = trimLeadingZeros(String(districtId));
+                return { districtId, feature };
+            }
+        }
+        
+        return null;
+    }
     
-    // Create Map 2
-    const map2 = L.map('map2').setView(hawaiiCenter, defaultZoom);
-    L.tileLayer(satelliteLayer, { attribution: satelliteAttribution, maxZoom: 18 }).addTo(map2);
+    // ============ CREATE POPUP CONTENT ============
     
-    // Create Map 3
-    const map3 = L.map('map3').setView(hawaiiCenter, defaultZoom);
-    L.tileLayer(satelliteLayer, { attribution: satelliteAttribution, maxZoom: 18 }).addTo(map3);
+    function createPopupContent(countyInfo, houseInfo, senateInfo) {
+        const rows = [
+            {
+                office: 'County Council',
+                data: countyInfo
+            },
+            {
+                office: 'State House',
+                data: houseInfo
+            },
+            {
+                office: 'State Senate',
+                data: senateInfo
+            }
+        ];
+        
+        let html = '<div class="popup-content">';
+        html += '<div class="popup-title">Your Representatives</div>';
+        
+        for (const row of rows) {
+            const hasMoho = row.data && row.data.mohoAina;
+            const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
+            const name = hasMoho ? row.data.mohoAina : '';
+            
+            html += `
+                <div class="rep-row">
+                    <div class="rep-oval ${mohoClass}"></div>
+                    <div class="rep-info">
+                        <div class="rep-office">${row.office}</div>
+                        <div class="rep-name">${name}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        return html;
+    }
     
-    // ============ LOAD DATA ============
+    // ============ GEOCODE AND SEARCH ============
     
-    // Map 1: County Council Districts (4 counties)
-    const countyLayers = [
-        'Hawaii County.geojson',
-        'Maui County.geojson',
-        'Honolulu County.geojson',
-        'Kauai County.geojson'
-    ];
+    async function geocodeAddress(address) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Hawaii, USA')}`;
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.length === 0) {
+                alert('Address not found. Please try a different address.');
+                return null;
+            }
+            
+            return {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+        } catch (error) {
+            console.error('Geocoding error:', error);
+            alert('Error finding address. Please try again.');
+            return null;
+        }
+    }
     
-    countyLayers.forEach(layerPath => {
-        fetch(layerPath)
-            .then(response => response.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: styleFeature,
-                    onEachFeature: onEachFeature
-                }).addTo(map1);
-            })
-            .catch(error => console.error('Error loading ' + layerPath + ':', error));
+    async function handleSearch() {
+        const address = document.getElementById('address-input').value.trim();
+        
+        if (!address) {
+            alert('Please enter an address');
+            return;
+        }
+        
+        // Geocode
+        const coords = await geocodeAddress(address);
+        if (!coords) return;
+        
+        const latlng = L.latLng(coords.lat, coords.lng);
+        
+        // Zoom to location (neighborhood level = zoom 14-15)
+        map.setView(latlng, 14);
+        
+        // Remove old marker if exists
+        if (currentMarker) {
+            map.removeLayer(currentMarker);
+        }
+        
+        // Find districts
+        let countyInfo = null;
+        let countyName = null;
+        
+        // Check which county
+        for (const {layer, data, county} of geoJsonLayers.county) {
+            const idField = county === 'maui' ? 'districtnu' : 'objectid';
+            const result = findDistrictByPoint(latlng, data, idField, county);
+            
+            if (result) {
+                countyName = county;
+                const districtData = sheetData[county]?.[result.districtId];
+                countyInfo = districtData || { mohoAina: '' };
+                break;
+            }
+        }
+        
+        // Check House
+        let houseInfo = null;
+        if (geoJsonLayers.house) {
+            const result = findDistrictByPoint(latlng, geoJsonLayers.house.data, 'SLDST');
+            if (result) {
+                houseInfo = sheetData.house?.[result.districtId] || { mohoAina: '' };
+            }
+        }
+        
+        // Check Senate
+        let senateInfo = null;
+        if (geoJsonLayers.senate) {
+            const result = findDistrictByPoint(latlng, geoJsonLayers.senate.data, 'SLDUST');
+            if (result) {
+                senateInfo = sheetData.senate?.[result.districtId] || { mohoAina: '' };
+            }
+        }
+        
+        // Create popup
+        const popupContent = createPopupContent(countyInfo, houseInfo, senateInfo);
+        
+        // Add marker with popup
+        currentMarker = L.marker(latlng).addTo(map);
+        currentMarker.bindPopup(popupContent, {
+            className: 'custom-popup',
+            maxWidth: 400
+        }).openPopup();
+    }
+    
+    // ============ POINT IN POLYGON LIBRARY ============
+    // Simple point-in-polygon check (simplified leaflet-pip)
+    
+    const leafletPip = {
+        pointInLayer: function(point, layer, first) {
+            const results = [];
+            layer.eachLayer(function(l) {
+                if (l.feature && l.feature.geometry) {
+                    if (leafletPip.pointInPolygon(point, l.feature.geometry)) {
+                        results.push(l);
+                        if (first) return results;
+                    }
+                }
+            });
+            return results;
+        },
+        
+        pointInPolygon: function(point, geometry) {
+            if (geometry.type === 'Polygon') {
+                return leafletPip.pointInRing(point, geometry.coordinates[0]);
+            } else if (geometry.type === 'MultiPolygon') {
+                for (const polygon of geometry.coordinates) {
+                    if (leafletPip.pointInRing(point, polygon[0])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        },
+        
+        pointInRing: function(point, ring) {
+            let inside = false;
+            const x = point[0], y = point[1];
+            
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                const xi = ring[i][0], yi = ring[i][1];
+                const xj = ring[j][0], yj = ring[j][1];
+                
+                const intersect = ((yi > y) !== (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                
+                if (intersect) inside = !inside;
+            }
+            
+            return inside;
+        }
+    };
+    
+    // ============ EVENT LISTENERS ============
+    
+    document.getElementById('search-button').addEventListener('click', handleSearch);
+    document.getElementById('address-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
     });
     
-    // Map 2: State House
-    fetch('House.geojson')
-        .then(response => response.json())
-        .then(data => {
-            L.geoJSON(data, {
-                style: styleFeature,
-                onEachFeature: onEachFeature
-            }).addTo(map2);
-        })
-        .catch(error => console.error('Error loading House layer:', error));
+    // ============ INITIALIZE ============
     
-    // Map 3: State Senate
-    fetch('Senate.geojson')
-        .then(response => response.json())
-        .then(data => {
-            L.geoJSON(data, {
-                style: styleFeature,
-                onEachFeature: onEachFeature
-            }).addTo(map3);
-        })
-        .catch(error => console.error('Error loading Senate layer:', error));
+    async function init() {
+        await Promise.all([
+            loadSheetData(),
+            loadGeoJsonLayers()
+        ]);
+        console.log('Map ready!');
+    }
+    
+    init();
     
 </script>
 
