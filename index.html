@@ -17,37 +17,106 @@
         
         #search-container {
             position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.5s ease;
+            text-align: center;
+        }
+        
+        #search-container.minimized {
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
-            background: white;
             padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        #search-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #search-title {
+            display: none;
         }
         
         #address-input {
+            width: 500px;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #address-input {
             width: 300px;
             padding: 10px;
             font-size: 16px;
-            border: 2px solid #333;
-            border-radius: 4px;
         }
         
         #search-button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 15px 30px;
+            font-size: 18px;
             background: #3388ff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
             margin-left: 5px;
         }
         
         #search-button:hover {
             background: #2266cc;
+        }
+        
+        #autocomplete-results {
+            position: absolute;
+            background: white;
+            border: 2px solid #333;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 500px;
+            left: 30px;
+            display: none;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        #search-container.minimized #autocomplete-results {
+            width: 300px;
+            left: 15px;
+        }
+        
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .autocomplete-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .autocomplete-item:last-child {
+            border-bottom: none;
         }
         
         #map {
@@ -123,8 +192,12 @@
 <body>
 
 <div id="search-container">
-    <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
-    <button id="search-button">Search</button>
+    <div id="search-title">Find Your Moho ʻĀina</div>
+    <div style="position: relative;">
+        <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
+        <button id="search-button">Search</button>
+        <div id="autocomplete-results"></div>
+    </div>
 </div>
 
 <div id="map"></div>
@@ -155,6 +228,8 @@
     };
     let sheetData = {};
     let currentMarker = null;
+    let hasSearched = false;
+    let autocompleteTimeout = null;
     
     // ============ INITIALIZE MAP ============
     
@@ -189,6 +264,46 @@
         }
         
         return data;
+    }
+    
+    // ============ AUTOCOMPLETE ============
+    
+    async function fetchAddressSuggestions(query) {
+        if (query.length < 3) {
+            document.getElementById('autocomplete-results').style.display = 'none';
+            return;
+        }
+        
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Hawaii, USA')}&limit=5&addressdetails=1`;
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            const resultsDiv = document.getElementById('autocomplete-results');
+            resultsDiv.innerHTML = '';
+            
+            if (data.length === 0) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.textContent = item.display_name;
+                div.onclick = () => {
+                    document.getElementById('address-input').value = item.display_name;
+                    resultsDiv.style.display = 'none';
+                    handleSearch(item.lat, item.lon);
+                };
+                resultsDiv.appendChild(div);
+            });
+            
+            resultsDiv.style.display = 'block';
+        } catch (error) {
+            console.error('Autocomplete error:', error);
+        }
     }
     
     // ============ LOAD GOOGLE SHEETS DATA ============
@@ -345,19 +460,32 @@
         }
     }
     
-    async function handleSearch() {
-        const address = document.getElementById('address-input').value.trim();
+    async function handleSearch(providedLat = null, providedLng = null) {
+        let coords;
         
-        if (!address) {
-            alert('Please enter an address');
-            return;
+        if (providedLat && providedLng) {
+            // From autocomplete
+            coords = { lat: parseFloat(providedLat), lng: parseFloat(providedLng) };
+        } else {
+            // From search button
+            const address = document.getElementById('address-input').value.trim();
+            
+            if (!address) {
+                alert('Please enter an address');
+                return;
+            }
+            
+            coords = await geocodeAddress(address);
+            if (!coords) return;
         }
         
-        // Geocode
-        const coords = await geocodeAddress(address);
-        if (!coords) return;
-        
         const latlng = L.latLng(coords.lat, coords.lng);
+        
+        // Minimize search bar after first search
+        if (!hasSearched) {
+            document.getElementById('search-container').classList.add('minimized');
+            hasSearched = true;
+        }
         
         // Zoom to location (neighborhood level = zoom 14-15)
         map.setView(latlng, 14);
@@ -414,7 +542,6 @@
     }
     
     // ============ POINT IN POLYGON LIBRARY ============
-    // Simple point-in-polygon check (simplified leaflet-pip)
     
     const leafletPip = {
         pointInLayer: function(point, layer, first) {
@@ -463,10 +590,26 @@
     
     // ============ EVENT LISTENERS ============
     
-    document.getElementById('search-button').addEventListener('click', handleSearch);
+    document.getElementById('search-button').addEventListener('click', () => handleSearch());
+    
     document.getElementById('address-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
+            document.getElementById('autocomplete-results').style.display = 'none';
             handleSearch();
+        }
+    });
+    
+    document.getElementById('address-input').addEventListener('input', function(e) {
+        clearTimeout(autocompleteTimeout);
+        autocompleteTimeout = setTimeout(() => {
+            fetchAddressSuggestions(e.target.value);
+        }, 300);
+    });
+    
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#search-container')) {
+            document.getElementById('autocomplete-results').style.display = 'none';
         }
     });
     
