@@ -63,7 +63,14 @@
             transition: all 0.5s ease;
         }
         
-        #search-container.minimized #address-input {
+        /* Style for PlaceAutocompleteElement */
+        gmp-place-autocomplete {
+            width: 500px !important;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #address-input,
+        #search-container.minimized gmp-place-autocomplete {
             width: 300px;
             padding: 10px;
             font-size: 16px;
@@ -237,48 +244,60 @@
     
     // ============ GOOGLE PLACES AUTOCOMPLETE ============
     
-    let autocomplete;
+    let placeAutocomplete;
     
-    function initAutocomplete() {
-        const input = document.getElementById('address-input');
-        
+    async function initAutocomplete() {
         try {
-            console.log('Initializing Google Places Autocomplete...');
+            console.log('Initializing Google Places PlaceAutocompleteElement...');
             
-            // Create autocomplete object restricted to Hawaii
-            autocomplete = new google.maps.places.Autocomplete(input, {
-                componentRestrictions: { country: 'us' },
-                bounds: new google.maps.LatLngBounds(
-                    new google.maps.LatLng(18.5, -160.5), // Southwest corner
-                    new google.maps.LatLng(22.5, -154.5)  // Northeast corner
-                ),
-                strictBounds: false,  // Changed to false - strict might be too restrictive
-                fields: ['geometry', 'formatted_address']
+            // Wait for Places library to load
+            const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+            
+            // Create the autocomplete element
+            const autocompleteInput = document.getElementById('address-input');
+            
+            // Create new Place Autocomplete Element
+            placeAutocomplete = new PlaceAutocompleteElement({
+                locationRestriction: {
+                    west: -160.5,
+                    north: 22.5,
+                    east: -154.5,
+                    south: 18.5
+                },
+                componentRestrictions: { country: 'us' }
             });
             
-            console.log('Autocomplete initialized successfully');
+            // Replace the input with the autocomplete element
+            autocompleteInput.parentNode.replaceChild(placeAutocomplete, autocompleteInput);
+            
+            // Style the new element to match our design
+            placeAutocomplete.style.width = '500px';
+            placeAutocomplete.style.padding = '15px';
+            placeAutocomplete.style.fontSize = '18px';
+            placeAutocomplete.style.border = '2px solid #333';
+            placeAutocomplete.style.borderRadius = '4px';
+            placeAutocomplete.style.transition = 'all 0.5s ease';
+            
+            console.log('PlaceAutocompleteElement initialized successfully');
             
             // Listen for place selection
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
+            placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
+                console.log('Place selected:', place);
                 
-                console.log('Place changed:', place);
+                await place.fetchFields({
+                    fields: ['displayName', 'location', 'formattedAddress']
+                });
                 
-                if (!place.geometry || !place.geometry.location) {
-                    console.log('No geometry for place');
+                if (!place.location) {
+                    console.log('No location for place');
                     return;
                 }
                 
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
+                const lat = place.location.lat();
+                const lng = place.location.lng();
                 
-                console.log('Place selected:', place.formatted_address, lat, lng);
+                console.log('Coordinates:', lat, lng);
                 handleSearch(lat, lng);
-            });
-            
-            // Add error listener
-            google.maps.event.addDomListener(input, 'error', function(error) {
-                console.error('Google Places error:', error);
             });
             
         } catch (error) {
@@ -469,12 +488,26 @@
         let coords;
         
         if (providedLat && providedLng) {
-            // From autocomplete
+            // From autocomplete selection
             coords = { lat: parseFloat(providedLat), lng: parseFloat(providedLng) };
-            console.log('Using autocomplete coords:', coords);
+            console.log('Using provided coords:', coords);
         } else {
-            // From search button
-            const address = document.getElementById('address-input').value.trim();
+            // From search button - need to get the typed address
+            let address;
+            
+            // Try to get value from PlaceAutocompleteElement
+            if (placeAutocomplete) {
+                const inputElement = placeAutocomplete.querySelector('input');
+                if (inputElement) {
+                    address = inputElement.value.trim();
+                }
+            } else {
+                // Fallback to regular input (shouldn't happen but just in case)
+                const inputElement = document.getElementById('address-input');
+                if (inputElement) {
+                    address = inputElement.value.trim();
+                }
+            }
             
             if (!address) {
                 alert('Please enter an address');
@@ -493,6 +526,14 @@
         // Minimize search bar after first search
         if (!hasSearched) {
             document.getElementById('search-container').classList.add('minimized');
+            
+            // Resize the PlaceAutocompleteElement if it exists
+            if (placeAutocomplete) {
+                placeAutocomplete.style.width = '300px';
+                placeAutocomplete.style.padding = '10px';
+                placeAutocomplete.style.fontSize = '16px';
+            }
+            
             hasSearched = true;
         }
         
@@ -628,17 +669,14 @@
         
         // Initialize Google Places Autocomplete if Google Maps loaded
         if (typeof google !== 'undefined' && google.maps) {
-            initAutocomplete();
+            await initAutocomplete();
         }
         
         // Set up event listeners
         document.getElementById('search-button').addEventListener('click', () => handleSearch());
         
-        document.getElementById('address-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        });
+        // Note: Can't add keypress listener to placeAutocomplete element the same way
+        // It handles Enter key internally
         
         console.log('Map ready!');
     }
