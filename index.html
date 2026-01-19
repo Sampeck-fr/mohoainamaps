@@ -160,8 +160,28 @@
             flex-grow: 1;
         }
         
+        .rep-level {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .rep-divider {
+            margin: 5px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+        }
+        
+        .rep-status {
+            font-weight: bold;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        
         .rep-name {
-            font-size: 14px;
+            font-size: 13px;
             color: #333;
             line-height: 1.4;
         }
@@ -443,29 +463,32 @@
             const hasMoho = row.data && row.data.mohoAina;
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
             
-            // Build the text content
-            let textContent = '';
+            // Build the content lines
+            let line2, line3;
             if (hasMoho) {
-                // Has Moho ʻĀina - show with link if website exists
-                const mohoName = row.data.mohoAina;
+                // Has Moho ʻĀina
+                line2 = 'Current Moho ʻĀina';
                 const website = row.data.website;
-                
                 if (website) {
-                    textContent = `${row.office} Moho ʻĀina: <a href="${website}" target="_blank" style="color: #0066cc; text-decoration: underline;">${mohoName}</a>`;
+                    line3 = `<a href="${website}" target="_blank">${row.data.mohoAina}</a>`;
                 } else {
-                    textContent = `${row.office} Moho ʻĀina: ${mohoName}`;
+                    line3 = row.data.mohoAina;
                 }
             } else {
-                // No Moho ʻĀina - show incumbent name
+                // No Moho ʻĀina
+                line2 = 'Moho ʻĀina Needed!';
                 const incumbentName = row.data && row.data.name ? row.data.name : 'Unknown';
-                textContent = `Moho Aina Needed! ${row.office}, Current Pilautician: ${incumbentName}`;
+                line3 = `Current Pilautician: ${incumbentName}`;
             }
             
             html += `
                 <div class="rep-row">
                     <div class="rep-oval ${mohoClass}"></div>
                     <div class="rep-info">
-                        <div class="rep-name">${textContent}</div>
+                        <div class="rep-level">${row.office}</div>
+                        <hr class="rep-divider">
+                        <div class="rep-status">${line2}</div>
+                        <div class="rep-name">${line3}</div>
                     </div>
                 </div>
             `;
