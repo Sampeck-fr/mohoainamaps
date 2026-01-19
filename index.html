@@ -11,8 +11,13 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Google Places API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtco2uFcMtIeKWGoHJE9KVrEk98H3wUtM&libraries=places"></script>
+    <!-- Google Maps API with async loading -->
+    <script>
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+            key: "AIzaSyAtco2uFcMtIeKWGoHJE9KVrEk98H3wUtM",
+            v: "weekly"
+        });
+    </script>
     
     <style>
         body {
@@ -204,6 +209,8 @@
     let sheetData = {};
     let currentMarker = null;
     let hasSearched = false;
+    let placeAutocomplete;
+    let autocompleteInput;
     
     // ============ INITIALIZE MAP ============
     
@@ -244,8 +251,6 @@
     
     // ============ GOOGLE PLACES AUTOCOMPLETE ============
     
-    let placeAutocomplete;
-    
     async function initAutocomplete() {
         try {
             console.log('Initializing Google Places PlaceAutocompleteElement...');
@@ -253,8 +258,8 @@
             // Wait for Places library to load
             const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
             
-            // Create the autocomplete element
-            const autocompleteInput = document.getElementById('address-input');
+            // Get the original input element
+            const originalInput = document.getElementById('address-input');
             
             // Create new Place Autocomplete Element
             placeAutocomplete = new PlaceAutocompleteElement({
@@ -268,7 +273,7 @@
             });
             
             // Replace the input with the autocomplete element
-            autocompleteInput.parentNode.replaceChild(placeAutocomplete, autocompleteInput);
+            originalInput.parentNode.replaceChild(placeAutocomplete, originalInput);
             
             // Style the new element to match our design
             placeAutocomplete.style.width = '500px';
@@ -278,11 +283,26 @@
             placeAutocomplete.style.borderRadius = '4px';
             placeAutocomplete.style.transition = 'all 0.5s ease';
             
+            // Try to get the inner input element (may be in shadow DOM)
+            setTimeout(() => {
+                // Try multiple methods to access the input
+                autocompleteInput = placeAutocomplete.querySelector('input') || 
+                                   placeAutocomplete.shadowRoot?.querySelector('input');
+                console.log('Got autocomplete input element:', autocompleteInput);
+                
+                // Add input event listener to track what user types
+                if (autocompleteInput) {
+                    autocompleteInput.addEventListener('input', (e) => {
+                        console.log('User typed:', e.target.value);
+                    });
+                }
+            }, 100);
+            
             console.log('PlaceAutocompleteElement initialized successfully');
             
             // Listen for place selection
             placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
-                console.log('Place selected:', place);
+                console.log('Place selected from dropdown:', place);
                 
                 await place.fetchFields({
                     fields: ['displayName', 'location', 'formattedAddress']
@@ -296,7 +316,7 @@
                 const lat = place.location.lat();
                 const lng = place.location.lng();
                 
-                console.log('Coordinates:', lat, lng);
+                console.log('Coordinates from selection:', lat, lng);
                 handleSearch(lat, lng);
             });
             
@@ -493,21 +513,47 @@
             console.log('Using provided coords:', coords);
         } else {
             // From search button - need to get the typed address
-            let address;
+            let address = '';
             
-            // Try to get value from PlaceAutocompleteElement
-            if (placeAutocomplete) {
-                const inputElement = placeAutocomplete.querySelector('input');
-                if (inputElement) {
-                    address = inputElement.value.trim();
+            console.log('Trying to get address from placeAutocomplete');
+            console.log('placeAutocomplete exists:', !!placeAutocomplete);
+            console.log('autocompleteInput exists:', !!autocompleteInput);
+            
+            // Try to get value from stored autocomplete input
+            if (autocompleteInput) {
+                address = autocompleteInput.value.trim();
+                console.log('Address from stored autocompleteInput:', address);
+            }
+            
+            // If we still don't have an address, try accessing shadow DOM
+            if (!address && placeAutocomplete) {
+                // First try direct value property
+                if (placeAutocomplete.value) {
+                    address = placeAutocomplete.value.trim();
+                    console.log('Address from placeAutocomplete.value:', address);
                 }
-            } else {
-                // Fallback to regular input (shouldn't happen but just in case)
-                const inputElement = document.getElementById('address-input');
-                if (inputElement) {
-                    address = inputElement.value.trim();
+                
+                // Then try shadow DOM
+                if (!address) {
+                    const inputElement = placeAutocomplete.shadowRoot?.querySelector('input') ||
+                                        placeAutocomplete.querySelector('input');
+                    if (inputElement) {
+                        address = inputElement.value.trim();
+                        console.log('Address from shadow DOM:', address);
+                    }
                 }
             }
+            
+            // Fallback to regular input (in case autocomplete didn't initialize)
+            if (!address) {
+                const regularInput = document.getElementById('address-input');
+                if (regularInput) {
+                    address = regularInput.value.trim();
+                    console.log('Address from regular input:', address);
+                }
+            }
+            
+            console.log('Final address to geocode:', address);
             
             if (!address) {
                 alert('Please enter an address');
@@ -532,6 +578,11 @@
                 placeAutocomplete.style.width = '300px';
                 placeAutocomplete.style.padding = '10px';
                 placeAutocomplete.style.fontSize = '16px';
+            }
+            
+            // Also update the inner input if we have it
+            if (autocompleteInput) {
+                autocompleteInput.style.width = '100%';
             }
             
             hasSearched = true;
