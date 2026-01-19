@@ -242,32 +242,49 @@
     function initAutocomplete() {
         const input = document.getElementById('address-input');
         
-        // Create autocomplete object restricted to Hawaii
-        autocomplete = new google.maps.places.Autocomplete(input, {
-            componentRestrictions: { country: 'us' },
-            bounds: new google.maps.LatLngBounds(
-                new google.maps.LatLng(18.5, -160.5), // Southwest corner
-                new google.maps.LatLng(22.5, -154.5)  // Northeast corner
-            ),
-            strictBounds: true,
-            fields: ['geometry', 'formatted_address']
-        });
-        
-        // Listen for place selection
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
+        try {
+            console.log('Initializing Google Places Autocomplete...');
             
-            if (!place.geometry || !place.geometry.location) {
-                console.log('No geometry for place');
-                return;
-            }
+            // Create autocomplete object restricted to Hawaii
+            autocomplete = new google.maps.places.Autocomplete(input, {
+                componentRestrictions: { country: 'us' },
+                bounds: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(18.5, -160.5), // Southwest corner
+                    new google.maps.LatLng(22.5, -154.5)  // Northeast corner
+                ),
+                strictBounds: false,  // Changed to false - strict might be too restrictive
+                fields: ['geometry', 'formatted_address']
+            });
             
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
+            console.log('Autocomplete initialized successfully');
             
-            console.log('Place selected:', place.formatted_address, lat, lng);
-            handleSearch(lat, lng);
-        });
+            // Listen for place selection
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                
+                console.log('Place changed:', place);
+                
+                if (!place.geometry || !place.geometry.location) {
+                    console.log('No geometry for place');
+                    return;
+                }
+                
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+                
+                console.log('Place selected:', place.formatted_address, lat, lng);
+                handleSearch(lat, lng);
+            });
+            
+            // Add error listener
+            google.maps.event.addDomListener(input, 'error', function(error) {
+                console.error('Google Places error:', error);
+            });
+            
+        } catch (error) {
+            console.error('Error initializing autocomplete:', error);
+            alert('Error loading address autocomplete. You can still search by clicking the Search button.');
+        }
     }
     
     // ============ LOAD GOOGLE SHEETS DATA ============
@@ -402,6 +419,12 @@
     // ============ GEOCODE AND SEARCH ============
     
     async function geocodeAddress(address) {
+        // Check if Google Maps is available
+        if (typeof google === 'undefined' || !google.maps) {
+            alert('Google Maps is not loaded. Please refresh the page and try again.');
+            return null;
+        }
+        
         return new Promise((resolve, reject) => {
             const geocoder = new google.maps.Geocoder();
             
@@ -415,12 +438,22 @@
                     )
                 },
                 (results, status) => {
+                    console.log('Geocoding status:', status);
+                    console.log('Geocoding results:', results);
+                    
                     if (status === 'OK' && results[0]) {
                         const location = results[0].geometry.location;
                         resolve({
                             lat: location.lat(),
                             lng: location.lng()
                         });
+                    } else if (status === 'OVER_QUERY_LIMIT') {
+                        alert('Too many requests. Please wait a moment and try again.');
+                        resolve(null);
+                    } else if (status === 'REQUEST_DENIED') {
+                        alert('Geocoding request denied. There may be an issue with the API key.');
+                        console.error('Geocoding denied - check API key restrictions');
+                        resolve(null);
                     } else {
                         alert('Address not found. Please try a different address.');
                         resolve(null);
@@ -577,6 +610,14 @@
     async function init() {
         console.log('Initializing map...');
         
+        // Check if Google Maps loaded
+        if (typeof google === 'undefined' || !google.maps) {
+            console.error('Google Maps failed to load!');
+            alert('Google Maps failed to load. Address autocomplete will not work, but you can still use the Search button.');
+        } else {
+            console.log('Google Maps loaded successfully');
+        }
+        
         // Initialize the Leaflet map
         initMap();
         
@@ -585,8 +626,10 @@
             loadGeoJsonLayers()
         ]);
         
-        // Initialize Google Places Autocomplete
-        initAutocomplete();
+        // Initialize Google Places Autocomplete if Google Maps loaded
+        if (typeof google !== 'undefined' && google.maps) {
+            initAutocomplete();
+        }
         
         // Set up event listeners
         document.getElementById('search-button').addEventListener('click', () => handleSearch());
