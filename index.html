@@ -8,6 +8,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <!-- Google Places API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtco2uFcMtIeKWGoHJE9KVrEk98H3wUtM&libraries=places"></script>
     
@@ -170,9 +173,6 @@
 
 <div id="map"></div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
     // ============ CONFIGURATION ============
     
@@ -200,14 +200,16 @@
     
     // ============ INITIALIZE MAP ============
     
-    const hawaiiCenter = [20.7984, -156.3319];
-    map = L.map('map').setView(hawaiiCenter, 8);
-    
-    const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-    L.tileLayer(satelliteLayer, { 
-        attribution: 'Tiles &copy; Esri',
-        maxZoom: 18 
-    }).addTo(map);
+    function initMap() {
+        const hawaiiCenter = [20.7984, -156.3319];
+        map = L.map('map').setView(hawaiiCenter, 8);
+        
+        const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        L.tileLayer(satelliteLayer, { 
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 18 
+        }).addTo(map);
+    }
     
     // ============ UTILITY FUNCTIONS ============
     
@@ -570,19 +572,14 @@
         }
     };
     
-    // ============ EVENT LISTENERS ============
-    
-    document.getElementById('search-button').addEventListener('click', () => handleSearch());
-    
-    document.getElementById('address-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    });
-    
     // ============ INITIALIZE ============
     
     async function init() {
+        console.log('Initializing map...');
+        
+        // Initialize the Leaflet map
+        initMap();
+        
         await Promise.all([
             loadSheetData(),
             loadGeoJsonLayers()
@@ -591,10 +588,23 @@
         // Initialize Google Places Autocomplete
         initAutocomplete();
         
+        // Set up event listeners
+        document.getElementById('search-button').addEventListener('click', () => handleSearch());
+        
+        document.getElementById('address-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+        
         console.log('Map ready!');
     }
     
-    init();
+    // Wait for window to load before initializing
+    window.addEventListener('load', function() {
+        console.log('Window loaded, starting init...');
+        init();
+    });
     
 </script>
 
