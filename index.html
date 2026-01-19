@@ -42,8 +42,8 @@
         
         #search-container.minimized {
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 20px;
+            transform: none;
             padding: 15px;
         }
         
@@ -160,16 +160,19 @@
             flex-grow: 1;
         }
         
-        .rep-office {
-            font-weight: bold;
+        .rep-name {
             font-size: 14px;
             color: #333;
-            margin-bottom: 3px;
+            line-height: 1.4;
         }
         
-        .rep-name {
-            font-size: 13px;
-            color: #666;
+        .rep-name a {
+            color: #0066cc;
+            text-decoration: underline;
+        }
+        
+        .rep-name a:hover {
+            color: #004499;
         }
     </style>
 </head>
@@ -242,7 +245,8 @@
             const id = trimLeadingZeros(values[0]);
             data[id] = {
                 name: values[1] || '',
-                mohoAina: values[2] || ''
+                mohoAina: values[2] || '',
+                website: values[3] || ''
             };
         }
         
@@ -438,14 +442,30 @@
         for (const row of rows) {
             const hasMoho = row.data && row.data.mohoAina;
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
-            const name = hasMoho ? row.data.mohoAina : '';
+            
+            // Build the text content
+            let textContent = '';
+            if (hasMoho) {
+                // Has Moho ʻĀina - show with link if website exists
+                const mohoName = row.data.mohoAina;
+                const website = row.data.website;
+                
+                if (website) {
+                    textContent = `${row.office} Moho ʻĀina: <a href="${website}" target="_blank" style="color: #0066cc; text-decoration: underline;">${mohoName}</a>`;
+                } else {
+                    textContent = `${row.office} Moho ʻĀina: ${mohoName}`;
+                }
+            } else {
+                // No Moho ʻĀina - show incumbent name
+                const incumbentName = row.data && row.data.name ? row.data.name : 'Unknown';
+                textContent = `Moho Aina Needed! ${row.office}, Current Pilautician: ${incumbentName}`;
+            }
             
             html += `
                 <div class="rep-row">
                     <div class="rep-oval ${mohoClass}"></div>
                     <div class="rep-info">
-                        <div class="rep-office">${row.office}</div>
-                        <div class="rep-name">${name}</div>
+                        <div class="rep-name">${textContent}</div>
                     </div>
                 </div>
             `;
@@ -569,6 +589,24 @@
         const latlng = L.latLng(coords.lat, coords.lng);
         console.log('LatLng object:', latlng);
         
+        // Show popup for this location with zoom
+        showPopupForLocation(latlng, true);
+    }
+    
+    // ============ HANDLE MAP CLICK ============
+    
+    function handleMapClick(latlng) {
+        console.log('Handling map click at:', latlng);
+        
+        // Show popup for clicked location without zoom
+        showPopupForLocation(latlng, false);
+    }
+    
+    // ============ SHOW POPUP FOR LOCATION ============
+    
+    function showPopupForLocation(latlng, shouldZoom) {
+        console.log('Showing popup for location:', latlng, 'zoom:', shouldZoom);
+        
         // Minimize search bar after first search
         if (!hasSearched) {
             document.getElementById('search-container').classList.add('minimized');
@@ -588,8 +626,10 @@
             hasSearched = true;
         }
         
-        // Zoom to location (neighborhood level = zoom 14-15)
-        map.setView(latlng, 14);
+        // Zoom to location if requested (from search)
+        if (shouldZoom) {
+            map.setView(latlng, 14);
+        }
         
         // Remove old marker if exists
         if (currentMarker) {
@@ -725,6 +765,12 @@
         
         // Set up event listeners
         document.getElementById('search-button').addEventListener('click', () => handleSearch());
+        
+        // Add map click event listener
+        map.on('click', function(e) {
+            console.log('Map clicked at:', e.latlng);
+            handleMapClick(e.latlng);
+        });
         
         // Note: Can't add keypress listener to placeAutocomplete element the same way
         // It handles Enter key internally
