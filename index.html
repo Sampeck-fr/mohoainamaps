@@ -8,6 +8,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- Google Places API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtco2uFcMtIeKWGoHJE9KVrEk98H3wUtM&libraries=places"></script>
+    
     <style>
         body {
             margin: 0;
@@ -83,40 +86,6 @@
         
         #search-button:hover {
             background: #2266cc;
-        }
-        
-        #autocomplete-results {
-            position: absolute;
-            background: white;
-            border: 2px solid #333;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 500px;
-            left: 30px;
-            display: none;
-            z-index: 1001;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        #search-container.minimized #autocomplete-results {
-            width: 300px;
-            left: 15px;
-        }
-        
-        .autocomplete-item {
-            padding: 10px;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .autocomplete-item:hover {
-            background: #f0f0f0;
-        }
-        
-        .autocomplete-item:last-child {
-            border-bottom: none;
         }
         
         #map {
@@ -196,7 +165,6 @@
     <div style="position: relative;">
         <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
         <button id="search-button">Search</button>
-        <div id="autocomplete-results"></div>
     </div>
 </div>
 
@@ -229,7 +197,6 @@
     let sheetData = {};
     let currentMarker = null;
     let hasSearched = false;
-    let autocompleteTimeout = null;
     
     // ============ INITIALIZE MAP ============
     
@@ -266,58 +233,39 @@
         return data;
     }
     
-    // ============ AUTOCOMPLETE ============
+    // ============ GOOGLE PLACES AUTOCOMPLETE ============
     
-    async function fetchAddressSuggestions(query) {
-        if (query.length < 3) {
-            document.getElementById('autocomplete-results').style.display = 'none';
-            return;
-        }
+    let autocomplete;
+    
+    function initAutocomplete() {
+        const input = document.getElementById('address-input');
         
-        // Hawaii bounding box: viewbox=west,north,east,south
-        // bounded=1 restricts results to this box
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Hawaii')}&limit=10&addressdetails=1&viewbox=-160.5,22.5,-154.5,18.5&bounded=1`;
+        // Create autocomplete object restricted to Hawaii
+        autocomplete = new google.maps.places.Autocomplete(input, {
+            componentRestrictions: { country: 'us' },
+            bounds: new google.maps.LatLngBounds(
+                new google.maps.LatLng(18.5, -160.5), // Southwest corner
+                new google.maps.LatLng(22.5, -154.5)  // Northeast corner
+            ),
+            strictBounds: true,
+            fields: ['geometry', 'formatted_address']
+        });
         
-        console.log('Fetching autocomplete for:', query);
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
+        // Listen for place selection
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
             
-            console.log('Autocomplete results:', data);
-            
-            // Filter to only show Hawaii results (double-check)
-            const hawaiiResults = data.filter(item => {
-                const lat = parseFloat(item.lat);
-                const lon = parseFloat(item.lon);
-                return lat >= 18.5 && lat <= 22.5 && lon >= -160.5 && lon <= -154.5;
-            });
-            
-            const resultsDiv = document.getElementById('autocomplete-results');
-            resultsDiv.innerHTML = '';
-            
-            if (hawaiiResults.length === 0) {
-                resultsDiv.style.display = 'none';
+            if (!place.geometry || !place.geometry.location) {
+                console.log('No geometry for place');
                 return;
             }
             
-            // Show max 5 results
-            hawaiiResults.slice(0, 5).forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-item';
-                div.textContent = item.display_name;
-                div.onclick = () => {
-                    document.getElementById('address-input').value = item.display_name;
-                    resultsDiv.style.display = 'none';
-                    handleSearch(item.lat, item.lon);
-                };
-                resultsDiv.appendChild(div);
-            });
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
             
-            resultsDiv.style.display = 'block';
-        } catch (error) {
-            console.error('Autocomplete error:', error);
-        }
+            console.log('Place selected:', place.formatted_address, lat, lng);
+            handleSearch(lat, lng);
+        });
     }
     
     // ============ LOAD GOOGLE SHEETS DATA ============
@@ -452,26 +400,32 @@
     // ============ GEOCODE AND SEARCH ============
     
     async function geocodeAddress(address) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Hawaii, USA')}`;
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
+        return new Promise((resolve, reject) => {
+            const geocoder = new google.maps.Geocoder();
             
-            if (data.length === 0) {
-                alert('Address not found. Please try a different address.');
-                return null;
-            }
-            
-            return {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
-            };
-        } catch (error) {
-            console.error('Geocoding error:', error);
-            alert('Error finding address. Please try again.');
-            return null;
-        }
+            geocoder.geocode(
+                { 
+                    address: address + ', Hawaii, USA',
+                    componentRestrictions: { country: 'US' },
+                    bounds: new google.maps.LatLngBounds(
+                        new google.maps.LatLng(18.5, -160.5),
+                        new google.maps.LatLng(22.5, -154.5)
+                    )
+                },
+                (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        const location = results[0].geometry.location;
+                        resolve({
+                            lat: location.lat(),
+                            lng: location.lng()
+                        });
+                    } else {
+                        alert('Address not found. Please try a different address.');
+                        resolve(null);
+                    }
+                }
+            );
+        });
     }
     
     async function handleSearch(providedLat = null, providedLng = null) {
@@ -622,22 +576,7 @@
     
     document.getElementById('address-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            document.getElementById('autocomplete-results').style.display = 'none';
             handleSearch();
-        }
-    });
-    
-    document.getElementById('address-input').addEventListener('input', function(e) {
-        clearTimeout(autocompleteTimeout);
-        autocompleteTimeout = setTimeout(() => {
-            fetchAddressSuggestions(e.target.value);
-        }, 300);
-    });
-    
-    // Hide autocomplete when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('#search-container')) {
-            document.getElementById('autocomplete-results').style.display = 'none';
         }
     });
     
@@ -648,6 +587,10 @@
             loadSheetData(),
             loadGeoJsonLayers()
         ]);
+        
+        // Initialize Google Places Autocomplete
+        initAutocomplete();
+        
         console.log('Map ready!');
     }
     
