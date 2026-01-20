@@ -260,20 +260,57 @@
     
     function parseCSV(text) {
         const lines = text.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
+        if (lines.length < 2) return {};
+        
+        // Parse headers - normalize for matching
+        const rawHeaders = lines[0].split(',').map(h => h.trim());
+        const headers = rawHeaders.map(h => h.toLowerCase().replace(/[ʻ'']/g, ''));
+        
+        console.log('Raw CSV Headers:', rawHeaders);
+        console.log('Normalized Headers:', headers);
+        
+        // Find column indexes with more flexible matching
+        const idIndex = headers.findIndex(h => h === 'id' || h === 'district');
+        const nameIndex = headers.findIndex(h => h === 'incumbent' || h === 'name');
+        const mohoAinaIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && !h.includes('website') && !h.includes('headshot'));
+        const mohoWebsiteIndex = headers.findIndex(h => h.includes('moho') && h.includes('website'));
+        const incumbentWebsiteIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('website'));
+        
+        console.log('Column mapping:', { 
+            idIndex, 
+            nameIndex, 
+            mohoAinaIndex, 
+            mohoWebsiteIndex, 
+            incumbentWebsiteIndex 
+        });
+        
         const data = {};
         
         for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue; // Skip empty lines
+            
             const values = lines[i].split(',').map(v => v.trim());
-            const id = trimLeadingZeros(values[0]);
+            
+            if (idIndex === -1 || !values[idIndex]) {
+                console.log(`Skipping row ${i}: no ID found`);
+                continue;
+            }
+            
+            const id = trimLeadingZeros(values[idIndex]);
             data[id] = {
-                name: values[1] || '',
-                mohoAina: values[2] || '',
-                mohoAinaWebsite: values[3] || '',
-                incumbentWebsite: values[4] || ''
+                name: nameIndex !== -1 ? (values[nameIndex] || '') : '',
+                mohoAina: mohoAinaIndex !== -1 ? (values[mohoAinaIndex] || '') : '',
+                mohoAinaWebsite: mohoWebsiteIndex !== -1 ? (values[mohoWebsiteIndex] || '') : '',
+                incumbentWebsite: incumbentWebsiteIndex !== -1 ? (values[incumbentWebsiteIndex] || '') : ''
             };
+            
+            // Log first few rows for debugging
+            if (i <= 3) {
+                console.log(`Row ${i} (District ${id}):`, data[id]);
+            }
         }
         
+        console.log(`Parsed ${Object.keys(data).length} records`);
         return data;
     }
     
