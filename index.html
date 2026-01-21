@@ -806,10 +806,14 @@
             
             if (result) {
                 console.log('Found county:', county, 'District:', result.districtId);
+                console.log('County feature properties:', result.feature.properties);
                 countyName = county;
                 const districtData = sheetData[county]?.[result.districtId];
                 countyInfo = districtData || { mohoAina: '' };
                 break;
+            } else {
+                console.log(`Not in ${county} county - checking first feature properties:`, 
+                    data.features[0]?.properties);
             }
         }
         
@@ -817,10 +821,14 @@
         let houseInfo = null;
         console.log('Checking house districts...');
         if (geoJsonLayers.house) {
-            const result = findDistrictByPoint(latlng, geoJsonLayers.house.data, 'SLDST');
+            const result = findDistrictByPoint(latlng, geoJsonLayers.house.data, 'SLDLST');
             if (result) {
                 console.log('Found house district:', result.districtId);
+                console.log('House feature properties:', result.feature.properties);
                 houseInfo = sheetData.house?.[result.districtId] || { mohoAina: '' };
+            } else {
+                console.log('No house district found - checking first feature properties:', 
+                    geoJsonLayers.house.data.features[0]?.properties);
             }
         }
         
