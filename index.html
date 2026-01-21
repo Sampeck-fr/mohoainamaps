@@ -220,7 +220,7 @@
         hawaii: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv',
         maui: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1505508928&single=true&output=csv',
         honolulu: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=978802498&single=true&output=csv',
-        kauai: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=913383944&single=true&output=csv'
+        kauai: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv'
     };
     
     // ============ GLOBAL VARIABLES ============
@@ -258,12 +258,39 @@
         return String(str).replace(/^0+/, '') || '0';
     }
     
+    function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+            
+            if (char === '"') {
+                if (inQuotes && nextChar === '"') {
+                    current += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        return result;
+    }
+    
     function parseCSV(text) {
         const lines = text.trim().split('\n');
         if (lines.length < 2) return {};
         
-        // Parse headers - normalize for matching
-        const rawHeaders = lines[0].split(',').map(h => h.trim());
+        // Parse headers using robust CSV parsing
+        const rawHeaders = parseCSVLine(lines[0]);
         const headers = rawHeaders.map(h => h.toLowerCase().replace(/[ʻ'']/g, ''));
         
         console.log('Raw CSV Headers:', rawHeaders);
@@ -289,7 +316,7 @@
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue; // Skip empty lines
             
-            const values = lines[i].split(',').map(v => v.trim());
+            const values = parseCSVLine(lines[i]);
             
             if (idIndex === -1 || !values[idIndex]) {
                 console.log(`Skipping row ${i}: no ID found`);
