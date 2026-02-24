@@ -299,16 +299,20 @@
         // Find column indexes with more flexible matching
         const idIndex = headers.findIndex(h => h === 'id' || h === 'district');
         const nameIndex = headers.findIndex(h => h === 'incumbent' || h === 'name');
-        const mohoAinaIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && !h.includes('website') && !h.includes('headshot'));
+        const mohoAinaIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && !h.includes('website') && !h.includes('headshot') && !h.includes('filename'));
         const mohoWebsiteIndex = headers.findIndex(h => h.includes('moho') && h.includes('website'));
         const incumbentWebsiteIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('website'));
+        const mohoHeadshotIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && h.includes('filename'));
+        const incumbentHeadshotIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('filename'));
         
         console.log('Column mapping:', { 
             idIndex, 
             nameIndex, 
             mohoAinaIndex, 
             mohoWebsiteIndex, 
-            incumbentWebsiteIndex 
+            incumbentWebsiteIndex,
+            mohoHeadshotIndex,
+            incumbentHeadshotIndex
         });
         
         const data = {};
@@ -328,7 +332,9 @@
                 name: nameIndex !== -1 ? (values[nameIndex] || '') : '',
                 mohoAina: mohoAinaIndex !== -1 ? (values[mohoAinaIndex] || '') : '',
                 mohoAinaWebsite: mohoWebsiteIndex !== -1 ? (values[mohoWebsiteIndex] || '') : '',
-                incumbentWebsite: incumbentWebsiteIndex !== -1 ? (values[incumbentWebsiteIndex] || '') : ''
+                incumbentWebsite: incumbentWebsiteIndex !== -1 ? (values[incumbentWebsiteIndex] || '') : '',
+                mohoAinaHeadshot: mohoHeadshotIndex !== -1 ? (values[mohoHeadshotIndex] || '') : '',
+                incumbentHeadshot: incumbentHeadshotIndex !== -1 ? (values[incumbentHeadshotIndex] || '') : ''
             };
             
             // Log first few rows for debugging
@@ -576,14 +582,16 @@
             const hasMoho = row.data && row.data.mohoAina;
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
             
-            // Get headshot URL
+            // Get headshot URL from filename columns
             let headshotUrl = null;
-            if (hasMoho && row.data.mohoAina) {
-                // Try to find headshot for Moho ʻĀina candidate
-                headshotUrl = findHeadshotForName(row.data.mohoAina);
-            } else if (row.data && row.data.name) {
-                // Try to find headshot for incumbent
-                headshotUrl = findHeadshotForName(row.data.name);
+            if (hasMoho && row.data.mohoAinaHeadshot) {
+                // Use Moho ʻĀina headshot filename from spreadsheet
+                headshotUrl = `https://raw.githubusercontent.com/Sampeck-fr/mohoainamaps/main/${row.data.mohoAinaHeadshot}`;
+                console.log(`Using Moho ʻĀina headshot: ${row.data.mohoAinaHeadshot}`);
+            } else if (row.data && row.data.incumbentHeadshot) {
+                // Use incumbent headshot filename from spreadsheet
+                headshotUrl = `https://raw.githubusercontent.com/Sampeck-fr/mohoainamaps/main/${row.data.incumbentHeadshot}`;
+                console.log(`Using incumbent headshot: ${row.data.incumbentHeadshot}`);
             }
             
             // Build oval with headshot or default silhouette
