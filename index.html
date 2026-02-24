@@ -32,12 +32,35 @@
             left: 0;
             top: 0;
             width: 33.333%;
+            min-width: 300px;
+            max-width: 60%;
             height: 100vh;
             background: white;
             z-index: 1000;
             display: flex;
             flex-direction: column;
             box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+        
+        /* Resize Handle */
+        #resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 8px;
+            height: 100%;
+            background: #ddd;
+            cursor: ew-resize;
+            z-index: 1001;
+            transition: background 0.2s;
+        }
+        
+        #resize-handle:hover {
+            background: #3388ff;
+        }
+        
+        #resize-handle.dragging {
+            background: #3388ff;
         }
         
         /* Search Container */
@@ -135,6 +158,7 @@
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="35" r="20" fill="%23999"/><path d="M 20 100 Q 20 70 50 70 Q 80 70 80 100 Z" fill="%23999"/></svg>');
             background-color: #f0f0f0;
             flex-shrink: 0;
+            transition: width 0.3s, height 0.3s, border-width 0.3s;
         }
         
         .has-moho {
@@ -155,6 +179,7 @@
             font-size: 18px;
             color: #333;
             margin-bottom: 8px;
+            transition: font-size 0.3s;
         }
         
         .rep-divider {
@@ -168,12 +193,14 @@
             font-size: 14px;
             color: #555;
             margin-bottom: 5px;
+            transition: font-size 0.3s;
         }
         
         .rep-name {
             font-size: 14px;
             color: #333;
             line-height: 1.4;
+            transition: font-size 0.3s;
         }
         
         .rep-name a {
@@ -189,6 +216,7 @@
 <body>
 
 <div id="side-panel">
+    <div id="resize-handle"></div>
     <div id="search-container">
         <div id="search-title">Find Your Moho ʻĀina</div>
         <div>
@@ -234,6 +262,7 @@
     function initMap() {
         const hawaiiCenter = [20.7984, -156.3319];
         map = L.map('map').setView(hawaiiCenter, 8);
+        window.mapInstance = map; // Store globally for resize handler
         
         const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
         L.tileLayer(satelliteLayer, { 
@@ -885,6 +914,11 @@
         resultsContainer.innerHTML = resultsContent;
         resultsContainer.classList.remove('hidden');
         
+        // Scale content to current sidebar width
+        const sidePanel = document.getElementById('side-panel');
+        const currentWidth = (sidePanel.offsetWidth / window.innerWidth) * 100;
+        scaleContent(currentWidth);
+        
         // Add marker on map
         currentMarker = L.marker(latlng).addTo(map);
     }
@@ -936,6 +970,97 @@
         }
     };
     
+    // ============ RESIZE FUNCTIONALITY ============
+    
+    function initResize() {
+        const resizeHandle = document.getElementById('resize-handle');
+        const sidePanel = document.getElementById('side-panel');
+        const map = document.getElementById('map');
+        let isResizing = false;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizeHandle.classList.add('dragging');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const windowWidth = window.innerWidth;
+            let newWidth = (e.clientX / windowWidth) * 100;
+            
+            // Constrain between min and max
+            const minWidthPercent = (300 / windowWidth) * 100;
+            const maxWidthPercent = 60;
+            
+            newWidth = Math.max(minWidthPercent, Math.min(maxWidthPercent, newWidth));
+            
+            // Update widths
+            sidePanel.style.width = `${newWidth}%`;
+            map.style.left = `${newWidth}%`;
+            map.style.width = `${100 - newWidth}%`;
+            
+            // Scale content based on sidebar width
+            scaleContent(newWidth);
+            
+            // Invalidate Leaflet map size
+            if (window.mapInstance) {
+                window.mapInstance.invalidateSize();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizeHandle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    }
+    
+    function scaleContent(widthPercent) {
+        // Calculate scale factor (33.333% = 1.0 scale, smaller = smaller scale)
+        const baseWidth = 33.333;
+        const scaleFactor = Math.max(0.6, Math.min(1.2, widthPercent / baseWidth));
+        
+        // Scale headshots
+        const headshots = document.querySelectorAll('.rep-oval');
+        const baseSize = 150;
+        const newSize = baseSize * scaleFactor;
+        const baseBorder = 7;
+        const newBorder = Math.max(4, baseBorder * scaleFactor);
+        
+        headshots.forEach(headshot => {
+            headshot.style.width = `${newSize}px`;
+            headshot.style.height = `${newSize}px`;
+            headshot.style.borderWidth = `${newBorder}px`;
+        });
+        
+        // Scale fonts
+        const titles = document.querySelectorAll('.popup-title');
+        titles.forEach(title => {
+            title.style.fontSize = `${22 * scaleFactor}px`;
+        });
+        
+        const levels = document.querySelectorAll('.rep-level');
+        levels.forEach(level => {
+            level.style.fontSize = `${18 * scaleFactor}px`;
+        });
+        
+        const statuses = document.querySelectorAll('.rep-status');
+        statuses.forEach(status => {
+            status.style.fontSize = `${14 * scaleFactor}px`;
+        });
+        
+        const names = document.querySelectorAll('.rep-name');
+        names.forEach(name => {
+            name.style.fontSize = `${14 * scaleFactor}px`;
+        });
+    }
+    
     // ============ INITIALIZE ============
     
     async function init() {
@@ -951,6 +1076,9 @@
         
         // Initialize the Leaflet map
         initMap();
+        
+        // Initialize resize functionality
+        initResize();
         
         await Promise.all([
             loadSheetData(),
