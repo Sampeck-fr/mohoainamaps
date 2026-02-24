@@ -542,6 +542,16 @@
         
         if (county) {
             console.log(`findDistrictByPoint for ${county}: looking for field "${idField}" in ${geoJsonData.features?.length} features`);
+            // Check first feature's geometry
+            const firstFeature = geoJsonData.features[0];
+            if (firstFeature) {
+                console.log(`First ${county} feature geometry type:`, firstFeature.geometry?.type);
+                console.log(`First ${county} feature has coordinates:`, !!firstFeature.geometry?.coordinates);
+                if (firstFeature.geometry?.coordinates) {
+                    const coords = firstFeature.geometry.coordinates;
+                    console.log(`Sample coordinates (first few):`, JSON.stringify(coords).substring(0, 200));
+                }
+            }
         }
         
         for (const feature of geoJsonData.features) {
