@@ -582,16 +582,18 @@
             const hasMoho = row.data && row.data.mohoAina;
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
             
-            // Get headshot URL from filename columns
+            // Get headshot URL directly from spreadsheet columns (expecting full URLs)
             let headshotUrl = null;
             if (hasMoho && row.data.mohoAinaHeadshot) {
-                // Use Moho ʻĀina headshot filename from spreadsheet
-                headshotUrl = `https://raw.githubusercontent.com/Sampeck-fr/mohoainamaps/main/${row.data.mohoAinaHeadshot}`;
-                console.log(`Using Moho ʻĀina headshot: ${row.data.mohoAinaHeadshot}`);
+                headshotUrl = row.data.mohoAinaHeadshot.trim();
+                console.log(`Using Moho ʻĀina headshot URL: ${headshotUrl}`);
             } else if (row.data && row.data.incumbentHeadshot) {
-                // Use incumbent headshot filename from spreadsheet
-                headshotUrl = `https://raw.githubusercontent.com/Sampeck-fr/mohoainamaps/main/${row.data.incumbentHeadshot}`;
-                console.log(`Using incumbent headshot: ${row.data.incumbentHeadshot}`);
+                headshotUrl = row.data.incumbentHeadshot.trim();
+                console.log(`Using incumbent headshot URL: ${headshotUrl}`);
+            }
+            
+            if (!headshotUrl) {
+                console.log(`No headshot found for ${row.office} - mohoAinaHeadshot: "${row.data?.mohoAinaHeadshot}", incumbentHeadshot: "${row.data?.incumbentHeadshot}"`);
             }
             
             // Build oval with headshot or default silhouette
