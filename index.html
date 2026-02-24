@@ -540,9 +540,18 @@
     function findDistrictByPoint(latlng, geoJsonData, idField, county = null) {
         const point = [latlng.lng, latlng.lat];
         
+        if (county) {
+            console.log(`findDistrictByPoint for ${county}: looking for field "${idField}" in ${geoJsonData.features?.length} features`);
+        }
+        
         for (const feature of geoJsonData.features) {
             if (leafletPip.pointInLayer(point, L.geoJSON(feature), true).length > 0) {
                 let districtId = feature.properties[idField];
+                
+                if (county) {
+                    console.log(`Point is inside a ${county} polygon! Properties:`, feature.properties);
+                    console.log(`Looking for field "${idField}", found value:`, districtId);
+                }
                 
                 // Special handling for Maui County
                 if (county === 'maui' && idField === 'objectid') {
@@ -809,8 +818,13 @@
         let countyName = null;
         
         console.log('Checking county districts...');
+        console.log('Click coordinates:', latlng.lat, latlng.lng);
+        console.log('Number of county layers loaded:', geoJsonLayers.county.length);
+        console.log('Available county data keys:', Object.keys(sheetData).filter(k => ['hawaii', 'maui', 'honolulu', 'kauai'].includes(k)));
+        
         // Check which county
         for (const {layer, data, county} of geoJsonLayers.county) {
+            console.log(`Checking ${county}: ${data.features?.length || 0} features loaded`);
             const idField = county === 'maui' ? 'districtnu' : 'objectid';
             const result = findDistrictByPoint(latlng, data, idField, county);
             
@@ -819,6 +833,10 @@
                 console.log('County feature properties:', result.feature.properties);
                 countyName = county;
                 const districtData = sheetData[county]?.[result.districtId];
+                if (!districtData) {
+                    console.log(`WARNING: No data found for ${county} district ${result.districtId}`);
+                    console.log(`Available ${county} districts:`, Object.keys(sheetData[county] || {}));
+                }
                 countyInfo = districtData || { mohoAina: '' };
                 break;
             } else {
@@ -835,7 +853,13 @@
             if (result) {
                 console.log('Found house district:', result.districtId);
                 console.log('House feature properties:', result.feature.properties);
-                houseInfo = sheetData.house?.[result.districtId] || { mohoAina: '' };
+                const districtData = sheetData.house?.[result.districtId];
+                if (!districtData) {
+                    console.log(`WARNING: No data found for house district ${result.districtId}`);
+                    console.log('Available house districts:', Object.keys(sheetData.house || {}));
+                    console.log('Sample house data:', sheetData.house);
+                }
+                houseInfo = districtData || { mohoAina: '' };
             } else {
                 console.log('No house district found - checking first feature properties:', 
                     geoJsonLayers.house.data.features[0]?.properties);
@@ -854,6 +878,10 @@
         }
         
         console.log('District results:', { countyInfo, houseInfo, senateInfo });
+        console.log('County name:', countyName);
+        console.log('Has county data:', !!countyInfo && countyInfo.mohoAina !== '');
+        console.log('Has house data:', !!houseInfo && houseInfo.mohoAina !== '');
+        console.log('Has senate data:', !!senateInfo && senateInfo.mohoAina !== '');
         
         // Create popup
         const popupContent = createPopupContent(countyInfo, houseInfo, senateInfo);
