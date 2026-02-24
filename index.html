@@ -26,10 +26,10 @@
             font-family: Arial, sans-serif;
         }
         
-        /* Side Panel */
+        /* Side Panel - starts hidden off-screen */
         #side-panel {
             position: fixed;
-            left: 0;
+            left: -35%;
             top: 0;
             width: 33.333%;
             min-width: 300px;
@@ -40,6 +40,11 @@
             display: flex;
             flex-direction: column;
             box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            transition: left 0.5s ease;
+        }
+        
+        #side-panel.visible {
+            left: 0;
         }
         
         /* Resize Handle */
@@ -63,11 +68,26 @@
             background: #3388ff;
         }
         
-        /* Search Container */
+        /* Search Container - can be centered or in sidebar */
         #search-container {
             padding: 20px;
             background: #f5f5f5;
             border-bottom: 2px solid #ddd;
+            transition: all 0.5s ease;
+        }
+        
+        /* Centered search state (initial) */
+        #search-container.centered {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            border-bottom: none;
         }
         
         #search-title {
@@ -75,6 +95,22 @@
             font-weight: bold;
             margin-bottom: 15px;
             color: #333;
+            transition: font-size 0.5s ease;
+        }
+        
+        #search-container.centered #search-title {
+            font-size: 32px;
+        }
+        
+        #search-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #search-container.centered #search-input-container {
+            flex-direction: row;
+            gap: 10px;
         }
         
         #address-input {
@@ -84,11 +120,27 @@
             border: 2px solid #333;
             border-radius: 4px;
             box-sizing: border-box;
+            transition: all 0.5s ease;
+            flex: 1;
+        }
+        
+        #search-container.centered #address-input {
+            width: 500px;
+            padding: 15px;
+            font-size: 18px;
+            flex: 0 0 auto;
         }
         
         /* Style for PlaceAutocompleteElement */
         gmp-place-autocomplete {
             width: 100% !important;
+            transition: all 0.5s ease;
+            flex: 1;
+        }
+        
+        #search-container.centered gmp-place-autocomplete {
+            width: 500px !important;
+            flex: 0 0 auto;
         }
         
         #search-button {
@@ -100,7 +152,13 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 10px;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.centered #search-button {
+            padding: 15px 30px;
+            font-size: 18px;
+            width: auto;
         }
         
         #search-button:hover {
@@ -120,10 +178,16 @@
         
         #map {
             position: fixed;
-            left: 33.333%;
+            left: 0;
             top: 0;
-            width: 66.667%;
+            width: 100%;
             height: 100vh;
+            transition: left 0.5s ease, width 0.5s ease;
+        }
+        
+        #map.with-sidebar {
+            left: 33.333%;
+            width: 66.667%;
         }
         
         .popup-content {
@@ -217,9 +281,9 @@
 
 <div id="side-panel">
     <div id="resize-handle"></div>
-    <div id="search-container">
+    <div id="search-container" class="centered">
         <div id="search-title">Find Your Moho ʻĀina</div>
-        <div>
+        <div id="search-input-container">
             <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
             <button id="search-button">Search</button>
         </div>
@@ -256,6 +320,43 @@
     let currentMarker = null;
     let placeAutocomplete;
     let autocompleteInput;
+    let hasActivatedSidebar = false;
+    
+    // ============ ACTIVATE SIDEBAR ============
+    
+    function activateSidebar() {
+        if (hasActivatedSidebar) return;
+        
+        hasActivatedSidebar = true;
+        
+        // Move search to sidebar
+        const searchContainer = document.getElementById('search-container');
+        searchContainer.classList.remove('centered');
+        
+        // Show sidebar
+        const sidePanel = document.getElementById('side-panel');
+        sidePanel.classList.add('visible');
+        
+        // Adjust map
+        const mapElement = document.getElementById('map');
+        mapElement.classList.add('with-sidebar');
+        
+        // Update PlaceAutocomplete width if it exists
+        if (placeAutocomplete) {
+            setTimeout(() => {
+                placeAutocomplete.style.width = '100%';
+                placeAutocomplete.style.padding = '12px';
+                placeAutocomplete.style.fontSize = '16px';
+            }, 100);
+        }
+        
+        // Invalidate map size after transition
+        setTimeout(() => {
+            if (window.mapInstance) {
+                window.mapInstance.invalidateSize();
+            }
+        }, 500);
+    }
     
     // ============ INITIALIZE MAP ============
     
@@ -394,12 +495,14 @@
             originalInput.parentNode.replaceChild(placeAutocomplete, originalInput);
             
             // Style the new element to match our design
-            placeAutocomplete.style.width = '100%';
-            placeAutocomplete.style.padding = '12px';
-            placeAutocomplete.style.fontSize = '16px';
+            // Start with centered styling
+            placeAutocomplete.style.width = '500px';
+            placeAutocomplete.style.padding = '15px';
+            placeAutocomplete.style.fontSize = '18px';
             placeAutocomplete.style.border = '2px solid #333';
             placeAutocomplete.style.borderRadius = '4px';
             placeAutocomplete.style.boxSizing = 'border-box';
+            placeAutocomplete.style.transition = 'all 0.5s ease';
             
             // Try to get the inner input element (may be in shadow DOM)
             setTimeout(() => {
@@ -820,6 +923,9 @@
     function showPopupForLocation(latlng, shouldZoom) {
         console.log('Showing results for location:', latlng, 'zoom:', shouldZoom);
         
+        // Activate sidebar on first interaction
+        activateSidebar();
+        
         // Zoom to location if requested (from search)
         if (shouldZoom) {
             map.setView(latlng, 14);
@@ -979,6 +1085,9 @@
         let isResizing = false;
         
         resizeHandle.addEventListener('mousedown', (e) => {
+            // Only allow resizing if sidebar is visible
+            if (!hasActivatedSidebar) return;
+            
             isResizing = true;
             resizeHandle.classList.add('dragging');
             document.body.style.cursor = 'ew-resize';
