@@ -1,72 +1,1005 @@
-#!/usr/bin/env python3
-"""
-Batch resize images to 300x300 square, cropping from center.
-Usage: python resize_headshots.py /path/to/image/folder
-"""
-import sys
-import os
-from PIL import Image
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Moho ʻĀina Lookup</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Google Maps API with async loading -->
+    <script>
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+            key: "AIzaSyAtco2uFcMtIeKWGoHJE9KVrEk98H3wUtM",
+            v: "weekly"
+        });
+    </script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #search-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.5s ease;
+            text-align: center;
+        }
+        
+        #search-container.minimized {
+            top: 20px;
+            left: 20px;
+            transform: none;
+            padding: 15px;
+        }
+        
+        #search-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #search-title {
+            display: none;
+        }
+        
+        #address-input {
+            width: 500px;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            transition: all 0.5s ease;
+        }
+        
+        /* Style for PlaceAutocompleteElement */
+        gmp-place-autocomplete {
+            width: 500px !important;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #address-input,
+        #search-container.minimized gmp-place-autocomplete {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        
+        #search-button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #3388ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.5s ease;
+        }
+        
+        #search-container.minimized #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-left: 5px;
+        }
+        
+        #search-button:hover {
+            background: #2266cc;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .popup-content {
+            width: 320px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .popup-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .rep-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .rep-oval {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="35" r="20" fill="%23999"/><path d="M 20 100 Q 20 70 50 70 Q 80 70 80 100 Z" fill="%23999"/></svg>');
+            background-color: #f0f0f0;
+            flex-shrink: 0;
+        }
+        
+        .has-moho {
+            border-color: #28a745;
+        }
+        
+        .no-moho {
+            border-color: #dc3545;
+        }
+        
+        .rep-info {
+            margin-left: 15px;
+            flex-grow: 1;
+        }
+        
+        .rep-level {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .rep-divider {
+            margin: 5px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+        }
+        
+        .rep-status {
+            font-weight: bold;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        
+        .rep-name {
+            font-size: 13px;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .rep-name a {
+            color: #0066cc;
+            text-decoration: underline;
+        }
+        
+        .rep-name a:hover {
+            color: #004499;
+        }
+    </style>
+</head>
+<body>
 
-def resize_to_square(image_path, output_path, size=300):
-    """Crop to center square and resize to specified size."""
-    with Image.open(image_path) as img:
-        # Convert to RGB if needed (handles PNG with transparency)
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Get dimensions
-        width, height = img.size
-        
-        # Crop to center square
-        if width > height:
-            # Wider than tall - crop sides
-            left = (width - height) // 2
-            top = 0
-            right = left + height
-            bottom = height
-        else:
-            # Taller than wide - crop top/bottom
-            left = 0
-            top = (height - width) // 2
-            right = width
-            bottom = top + width
-        
-        img_cropped = img.crop((left, top, right, bottom))
-        
-        # Resize to target size
-        img_resized = img_cropped.resize((size, size), Image.Resampling.LANCZOS)
-        
-        # Save
-        img_resized.save(output_path, 'JPEG', quality=90)
-        print(f"✓ Processed: {os.path.basename(image_path)}")
+<div id="search-container">
+    <div id="search-title">Find Your Moho ʻĀina</div>
+    <div style="position: relative;">
+        <input type="text" id="address-input" placeholder="Enter your Hawaii address...">
+        <button id="search-button">Search</button>
+    </div>
+</div>
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python resize_headshots.py /path/to/images")
-        sys.exit(1)
+<div id="map"></div>
+
+<script>
+    // ============ CONFIGURATION ============
     
-    folder = sys.argv[1]
+    // Google Sheets published CSV URLs
+    const SHEET_URLS = {
+        senate: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1358067559&single=true&output=csv',
+        house: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=0&single=true&output=csv',
+        hawaii: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv',
+        maui: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1505508928&single=true&output=csv',
+        honolulu: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=978802498&single=true&output=csv',
+        kauai: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv'
+    };
     
-    if not os.path.isdir(folder):
-        print(f"Error: {folder} is not a directory")
-        sys.exit(1)
+    // ============ GLOBAL VARIABLES ============
     
-    # Create output folder
-    output_folder = os.path.join(folder, "resized_300x300")
-    os.makedirs(output_folder, exist_ok=True)
+    let map;
+    let geoJsonLayers = {
+        county: [],
+        house: null,
+        senate: null
+    };
+    let sheetData = {};
+    let currentMarker = null;
+    let hasSearched = false;
+    let placeAutocomplete;
+    let autocompleteInput;
+    let headshotFiles = []; // Will store list of headshot filenames from GitHub
     
-    # Process all jpg/jpeg files
-    for filename in os.listdir(folder):
-        if filename.lower().endswith(('.jpg', '.jpeg')):
-            input_path = os.path.join(folder, filename)
-            output_path = os.path.join(output_folder, filename)
+    // ============ INITIALIZE MAP ============
+    
+    function initMap() {
+        const hawaiiCenter = [20.7984, -156.3319];
+        map = L.map('map').setView(hawaiiCenter, 8);
+        
+        const satelliteLayer = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        L.tileLayer(satelliteLayer, { 
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 18 
+        }).addTo(map);
+    }
+    
+    // ============ UTILITY FUNCTIONS ============
+    
+    function trimLeadingZeros(str) {
+        if (!str) return str;
+        return String(str).replace(/^0+/, '') || '0';
+    }
+    
+    function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
             
-            try:
-                resize_to_square(input_path, output_path, size=300)
-            except Exception as e:
-                print(f"✗ Error processing {filename}: {e}")
+            if (char === '"') {
+                if (inQuotes && nextChar === '"') {
+                    current += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        return result;
+    }
     
-    print(f"\nDone! Resized images saved to: {output_folder}")
+    function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) return {};
+        
+        // Parse headers using robust CSV parsing
+        const rawHeaders = parseCSVLine(lines[0]);
+        const headers = rawHeaders.map(h => h.toLowerCase().replace(/[ʻ'']/g, ''));
+        
+        console.log('Raw CSV Headers:', rawHeaders);
+        console.log('Normalized Headers:', headers);
+        
+        // Find column indexes with more flexible matching
+        const idIndex = headers.findIndex(h => h === 'id' || h === 'district');
+        const nameIndex = headers.findIndex(h => h === 'incumbent' || h === 'name');
+        const mohoAinaIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && !h.includes('website') && !h.includes('headshot') && !h.includes('filename'));
+        const mohoWebsiteIndex = headers.findIndex(h => h.includes('moho') && h.includes('website'));
+        const incumbentWebsiteIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('website'));
+        const mohoHeadshotIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && h.includes('filename'));
+        const incumbentHeadshotIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('filename'));
+        
+        console.log('Column mapping:', { 
+            idIndex, 
+            nameIndex, 
+            mohoAinaIndex, 
+            mohoWebsiteIndex, 
+            incumbentWebsiteIndex,
+            mohoHeadshotIndex,
+            incumbentHeadshotIndex
+        });
+        
+        const data = {};
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue; // Skip empty lines
+            
+            const values = parseCSVLine(lines[i]);
+            
+            if (idIndex === -1 || !values[idIndex]) {
+                console.log(`Skipping row ${i}: no ID found`);
+                continue;
+            }
+            
+            const id = trimLeadingZeros(values[idIndex]);
+            data[id] = {
+                name: nameIndex !== -1 ? (values[nameIndex] || '') : '',
+                mohoAina: mohoAinaIndex !== -1 ? (values[mohoAinaIndex] || '') : '',
+                mohoAinaWebsite: mohoWebsiteIndex !== -1 ? (values[mohoWebsiteIndex] || '') : '',
+                incumbentWebsite: incumbentWebsiteIndex !== -1 ? (values[incumbentWebsiteIndex] || '') : '',
+                mohoAinaHeadshot: mohoHeadshotIndex !== -1 ? (values[mohoHeadshotIndex] || '') : '',
+                incumbentHeadshot: incumbentHeadshotIndex !== -1 ? (values[incumbentHeadshotIndex] || '') : ''
+            };
+            
+            // Log first few rows for debugging
+            if (i <= 3) {
+                console.log(`Row ${i} (District ${id}):`, data[id]);
+            }
+        }
+        
+        console.log(`Parsed ${Object.keys(data).length} records`);
+        return data;
+    }
+    
+    // ============ GOOGLE PLACES AUTOCOMPLETE ============
+    
+    async function initAutocomplete() {
+        try {
+            console.log('Initializing Google Places PlaceAutocompleteElement...');
+            
+            // Wait for Places library to load
+            const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+            
+            // Get the original input element
+            const originalInput = document.getElementById('address-input');
+            
+            // Create new Place Autocomplete Element
+            placeAutocomplete = new PlaceAutocompleteElement({
+                locationRestriction: {
+                    west: -160.5,
+                    north: 22.5,
+                    east: -154.5,
+                    south: 18.5
+                },
+                componentRestrictions: { country: 'us' }
+            });
+            
+            // Replace the input with the autocomplete element
+            originalInput.parentNode.replaceChild(placeAutocomplete, originalInput);
+            
+            // Style the new element to match our design
+            placeAutocomplete.style.width = '500px';
+            placeAutocomplete.style.padding = '15px';
+            placeAutocomplete.style.fontSize = '18px';
+            placeAutocomplete.style.border = '2px solid #333';
+            placeAutocomplete.style.borderRadius = '4px';
+            placeAutocomplete.style.transition = 'all 0.5s ease';
+            
+            // Try to get the inner input element (may be in shadow DOM)
+            setTimeout(() => {
+                // Try multiple methods to access the input
+                autocompleteInput = placeAutocomplete.querySelector('input') || 
+                                   placeAutocomplete.shadowRoot?.querySelector('input');
+                console.log('Got autocomplete input element:', autocompleteInput);
+                
+                // Add input event listener to track what user types
+                if (autocompleteInput) {
+                    autocompleteInput.addEventListener('input', (e) => {
+                        console.log('User typed:', e.target.value);
+                    });
+                }
+            }, 100);
+            
+            console.log('PlaceAutocompleteElement initialized successfully');
+            
+            // Listen for place selection
+            placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
+                console.log('Place selected from dropdown:', place);
+                
+                await place.fetchFields({
+                    fields: ['displayName', 'location', 'formattedAddress']
+                });
+                
+                if (!place.location) {
+                    console.log('No location for place');
+                    return;
+                }
+                
+                const lat = place.location.lat();
+                const lng = place.location.lng();
+                
+                console.log('Coordinates from selection:', lat, lng);
+                handleSearch(lat, lng);
+            });
+            
+        } catch (error) {
+            console.error('Error initializing autocomplete:', error);
+            alert('Error loading address autocomplete. You can still search by clicking the Search button.');
+        }
+    }
+    
+    // ============ LOAD HEADSHOTS FROM GITHUB ============
+    
+    async function loadHeadshotList() {
+        try {
+            // Fetch file list from GitHub API
+            const response = await fetch('https://api.github.com/repos/Sampeck-fr/mohoainamaps/contents/');
+            const files = await response.json();
+            
+            // Filter to only .jpg files
+            headshotFiles = files
+                .filter(file => file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg'))
+                .map(file => file.name);
+            
+            console.log('Loaded headshot files:', headshotFiles);
+        } catch (error) {
+            console.error('Error loading headshot list:', error);
+        }
+    }
+    
+    // ============ MATCH NAME TO HEADSHOT ============
+    
+    function findHeadshotForName(fullName) {
+        if (!fullName || headshotFiles.length === 0) return null;
+        
+        // Clean the name - remove punctuation, convert to lowercase
+        const cleanName = fullName.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+        const nameParts = cleanName.split(' ');
+        
+        // Try to find a matching file
+        for (const filename of headshotFiles) {
+            const cleanFilename = filename.toLowerCase().replace('.jpg', '').replace('.jpeg', '');
+            
+            // Check if any part of the name appears in the filename
+            for (const part of nameParts) {
+                if (part.length > 2 && cleanFilename.includes(part)) {
+                    console.log(`Matched "${fullName}" to "${filename}"`);
+                    return `https://raw.githubusercontent.com/Sampeck-fr/mohoainamaps/main/${filename}`;
+                }
+            }
+        }
+        
+        console.log(`No headshot found for "${fullName}"`);
+        return null;
+    }
+    
+    // ============ LOAD GOOGLE SHEETS DATA ============
+    
+    async function loadSheetData() {
+        try {
+            const promises = Object.entries(SHEET_URLS).map(async ([key, url]) => {
+                const response = await fetch(url);
+                const text = await response.text();
+                sheetData[key] = parseCSV(text);
+            });
+            
+            await Promise.all(promises);
+            console.log('Sheet data loaded:', sheetData);
+        } catch (error) {
+            console.error('Error loading sheet data:', error);
+        }
+    }
+    
+    // ============ LOAD GEOJSON LAYERS ============
+    
+    async function loadGeoJsonLayers() {
+        // Load county layers
+        const countyFiles = [
+            { file: 'Hawaii County.geojson', county: 'hawaii' },
+            { file: 'Maui County.geojson', county: 'maui' },
+            { file: 'Honolulu County.geojson', county: 'honolulu' },
+            { file: 'Kauai County.geojson', county: 'kauai' }
+        ];
+        
+        for (const {file, county} of countyFiles) {
+            try {
+                const response = await fetch(file);
+                const data = await response.json();
+                const layer = L.geoJSON(data, {
+                    style: { fillOpacity: 0, color: '#333', weight: 1 }
+                });
+                geoJsonLayers.county.push({ layer, data, county });
+            } catch (error) {
+                console.error(`Error loading ${file}:`, error);
+            }
+        }
+        
+        // Load House
+        try {
+            const response = await fetch('House.geojson');
+            const data = await response.json();
+            geoJsonLayers.house = {
+                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                data
+            };
+        } catch (error) {
+            console.error('Error loading House:', error);
+        }
+        
+        // Load Senate
+        try {
+            const response = await fetch('Senate.geojson');
+            const data = await response.json();
+            geoJsonLayers.senate = {
+                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                data
+            };
+        } catch (error) {
+            console.error('Error loading Senate:', error);
+        }
+    }
+    
+    // ============ FIND DISTRICT BY POINT ============
+    
+    function findDistrictByPoint(latlng, geoJsonData, idField, county = null) {
+        const point = [latlng.lng, latlng.lat];
+        
+        if (county) {
+            console.log(`findDistrictByPoint for ${county}: looking for field "${idField}" in ${geoJsonData.features?.length} features`);
+            // Check first feature's geometry
+            const firstFeature = geoJsonData.features[0];
+            if (firstFeature) {
+                console.log(`First ${county} feature geometry type:`, firstFeature.geometry?.type);
+                console.log(`First ${county} feature has coordinates:`, !!firstFeature.geometry?.coordinates);
+                if (firstFeature.geometry?.coordinates) {
+                    const coords = firstFeature.geometry.coordinates;
+                    console.log(`Sample coordinates (first few):`, JSON.stringify(coords).substring(0, 200));
+                }
+            }
+        }
+        
+        for (const feature of geoJsonData.features) {
+            if (leafletPip.pointInLayer(point, L.geoJSON(feature), true).length > 0) {
+                let districtId = feature.properties[idField];
+                
+                if (county) {
+                    console.log(`Point is inside a ${county} polygon! Properties:`, feature.properties);
+                    console.log(`Looking for field "${idField}", found value:`, districtId);
+                }
+                
+                // Special handling for Maui County
+                if (county === 'maui' && idField === 'objectid') {
+                    districtId = feature.properties['districtnu'];
+                }
+                
+                districtId = trimLeadingZeros(String(districtId));
+                return { districtId, feature };
+            }
+        }
+        
+        return null;
+    }
+    
+    // ============ CREATE POPUP CONTENT ============
+    
+    function createPopupContent(countyInfo, houseInfo, senateInfo) {
+        const rows = [
+            {
+                office: 'County Council',
+                data: countyInfo
+            },
+            {
+                office: 'State House',
+                data: houseInfo
+            },
+            {
+                office: 'State Senate',
+                data: senateInfo
+            }
+        ];
+        
+        let html = '<div class="popup-content">';
+        html += '<div class="popup-title">Your Representatives</div>';
+        
+        for (const row of rows) {
+            const hasMoho = row.data && row.data.mohoAina;
+            const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
+            
+            // Get headshot URL directly from spreadsheet columns (expecting full URLs)
+            let headshotUrl = null;
+            if (hasMoho && row.data.mohoAinaHeadshot) {
+                headshotUrl = row.data.mohoAinaHeadshot.trim();
+                console.log(`Using Moho ʻĀina headshot URL: ${headshotUrl}`);
+            } else if (row.data && row.data.incumbentHeadshot) {
+                headshotUrl = row.data.incumbentHeadshot.trim();
+                console.log(`Using incumbent headshot URL: ${headshotUrl}`);
+            }
+            
+            if (!headshotUrl) {
+                console.log(`No headshot found for ${row.office} - mohoAinaHeadshot: "${row.data?.mohoAinaHeadshot}", incumbentHeadshot: "${row.data?.incumbentHeadshot}"`);
+            }
+            
+            // Build oval with headshot or default silhouette
+            let ovalStyle = `class="rep-oval ${mohoClass}"`;
+            if (headshotUrl) {
+                ovalStyle = `class="rep-oval ${mohoClass}" style="background-image: url('${headshotUrl}')"`;
+            }
+            
+            // Build the content lines
+            let line2, line3;
+            if (hasMoho) {
+                // Has Moho ʻĀina
+                line2 = 'Current Moho ʻĀina';
+                const website = row.data.mohoAinaWebsite;
+                if (website) {
+                    line3 = `<a href="${website}" target="_blank">${row.data.mohoAina}</a>`;
+                } else {
+                    line3 = row.data.mohoAina;
+                }
+            } else {
+                // No Moho ʻĀina
+                line2 = 'Moho ʻĀina Needed! Current Pilautician:';
+                const incumbentName = row.data && row.data.name ? row.data.name : 'Unknown';
+                const incumbentWebsite = row.data && row.data.incumbentWebsite ? row.data.incumbentWebsite : '';
+                
+                if (incumbentWebsite) {
+                    line3 = `<a href="${incumbentWebsite}" target="_blank">${incumbentName}</a>`;
+                } else {
+                    line3 = incumbentName;
+                }
+            }
+            
+            html += `
+                <div class="rep-row">
+                    <div ${ovalStyle}></div>
+                    <div class="rep-info">
+                        <div class="rep-level">${row.office}</div>
+                        <hr class="rep-divider">
+                        <div class="rep-status">${line2}</div>
+                        <div class="rep-name">${line3}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
+    // ============ GEOCODE AND SEARCH ============
+    
+    async function geocodeAddress(address) {
+        // Check if Google Maps is available
+        if (typeof google === 'undefined' || !google.maps) {
+            alert('Google Maps is not loaded. Please refresh the page and try again.');
+            return null;
+        }
+        
+        return new Promise((resolve, reject) => {
+            const geocoder = new google.maps.Geocoder();
+            
+            geocoder.geocode(
+                { 
+                    address: address + ', Hawaii, USA',
+                    componentRestrictions: { country: 'US' },
+                    bounds: new google.maps.LatLngBounds(
+                        new google.maps.LatLng(18.5, -160.5),
+                        new google.maps.LatLng(22.5, -154.5)
+                    )
+                },
+                (results, status) => {
+                    console.log('Geocoding status:', status);
+                    console.log('Geocoding results:', results);
+                    
+                    if (status === 'OK' && results[0]) {
+                        const location = results[0].geometry.location;
+                        resolve({
+                            lat: location.lat(),
+                            lng: location.lng()
+                        });
+                    } else if (status === 'OVER_QUERY_LIMIT') {
+                        alert('Too many requests. Please wait a moment and try again.');
+                        resolve(null);
+                    } else if (status === 'REQUEST_DENIED') {
+                        alert('Geocoding request denied. There may be an issue with the API key.');
+                        console.error('Geocoding denied - check API key restrictions');
+                        resolve(null);
+                    } else {
+                        alert('Address not found. Please try a different address.');
+                        resolve(null);
+                    }
+                }
+            );
+        });
+    }
+    
+    async function handleSearch(providedLat = null, providedLng = null) {
+        console.log('handleSearch called with:', providedLat, providedLng);
+        
+        let coords;
+        
+        if (providedLat && providedLng) {
+            // From autocomplete selection
+            coords = { lat: parseFloat(providedLat), lng: parseFloat(providedLng) };
+            console.log('Using provided coords:', coords);
+        } else {
+            // From search button - need to get the typed address
+            let address = '';
+            
+            console.log('Trying to get address from placeAutocomplete');
+            console.log('placeAutocomplete exists:', !!placeAutocomplete);
+            console.log('autocompleteInput exists:', !!autocompleteInput);
+            
+            // Try to get value from stored autocomplete input
+            if (autocompleteInput) {
+                address = autocompleteInput.value.trim();
+                console.log('Address from stored autocompleteInput:', address);
+            }
+            
+            // If we still don't have an address, try accessing shadow DOM
+            if (!address && placeAutocomplete) {
+                // First try direct value property
+                if (placeAutocomplete.value) {
+                    address = placeAutocomplete.value.trim();
+                    console.log('Address from placeAutocomplete.value:', address);
+                }
+                
+                // Then try shadow DOM
+                if (!address) {
+                    const inputElement = placeAutocomplete.shadowRoot?.querySelector('input') ||
+                                        placeAutocomplete.querySelector('input');
+                    if (inputElement) {
+                        address = inputElement.value.trim();
+                        console.log('Address from shadow DOM:', address);
+                    }
+                }
+            }
+            
+            // Fallback to regular input (in case autocomplete didn't initialize)
+            if (!address) {
+                const regularInput = document.getElementById('address-input');
+                if (regularInput) {
+                    address = regularInput.value.trim();
+                    console.log('Address from regular input:', address);
+                }
+            }
+            
+            console.log('Final address to geocode:', address);
+            
+            if (!address) {
+                alert('Please enter an address');
+                return;
+            }
+            
+            console.log('Geocoding address:', address);
+            coords = await geocodeAddress(address);
+            if (!coords) return;
+            console.log('Geocoded to:', coords);
+        }
+        
+        const latlng = L.latLng(coords.lat, coords.lng);
+        console.log('LatLng object:', latlng);
+        
+        // Show popup for this location with zoom
+        showPopupForLocation(latlng, true);
+    }
+    
+    // ============ HANDLE MAP CLICK ============
+    
+    function handleMapClick(latlng) {
+        console.log('Handling map click at:', latlng);
+        
+        // Show popup for clicked location without zoom
+        showPopupForLocation(latlng, false);
+    }
+    
+    // ============ SHOW POPUP FOR LOCATION ============
+    
+    function showPopupForLocation(latlng, shouldZoom) {
+        console.log('Showing popup for location:', latlng, 'zoom:', shouldZoom);
+        
+        // Minimize search bar after first search
+        if (!hasSearched) {
+            document.getElementById('search-container').classList.add('minimized');
+            
+            // Resize the PlaceAutocompleteElement if it exists
+            if (placeAutocomplete) {
+                placeAutocomplete.style.width = '300px';
+                placeAutocomplete.style.padding = '10px';
+                placeAutocomplete.style.fontSize = '16px';
+            }
+            
+            // Also update the inner input if we have it
+            if (autocompleteInput) {
+                autocompleteInput.style.width = '100%';
+            }
+            
+            hasSearched = true;
+        }
+        
+        // Zoom to location if requested (from search)
+        if (shouldZoom) {
+            map.setView(latlng, 14);
+        }
+        
+        // Remove old marker if exists
+        if (currentMarker) {
+            map.removeLayer(currentMarker);
+        }
+        
+        // Find districts
+        let countyInfo = null;
+        let countyName = null;
+        
+        console.log('Checking county districts...');
+        console.log('Click coordinates:', latlng.lat, latlng.lng);
+        console.log('Number of county layers loaded:', geoJsonLayers.county.length);
+        console.log('Available county data keys:', Object.keys(sheetData).filter(k => ['hawaii', 'maui', 'honolulu', 'kauai'].includes(k)));
+        
+        // Check which county
+        for (const {layer, data, county} of geoJsonLayers.county) {
+            console.log(`Checking ${county}: ${data.features?.length || 0} features loaded`);
+            const idField = county === 'maui' ? 'districtnu' : 'objectid';
+            const result = findDistrictByPoint(latlng, data, idField, county);
+            
+            if (result) {
+                console.log('Found county:', county, 'District:', result.districtId);
+                console.log('County feature properties:', result.feature.properties);
+                countyName = county;
+                const districtData = sheetData[county]?.[result.districtId];
+                if (!districtData) {
+                    console.log(`WARNING: No data found for ${county} district ${result.districtId}`);
+                    console.log(`Available ${county} districts:`, Object.keys(sheetData[county] || {}));
+                }
+                countyInfo = districtData || { mohoAina: '' };
+                break;
+            } else {
+                console.log(`Not in ${county} county - checking first feature properties:`, 
+                    data.features[0]?.properties);
+            }
+        }
+        
+        // Check House
+        let houseInfo = null;
+        console.log('Checking house districts...');
+        if (geoJsonLayers.house) {
+            const result = findDistrictByPoint(latlng, geoJsonLayers.house.data, 'SLDLST');
+            if (result) {
+                console.log('Found house district:', result.districtId);
+                console.log('House feature properties:', result.feature.properties);
+                const districtData = sheetData.house?.[result.districtId];
+                if (!districtData) {
+                    console.log(`WARNING: No data found for house district ${result.districtId}`);
+                    console.log('Available house districts:', Object.keys(sheetData.house || {}));
+                    console.log('Sample house data:', sheetData.house);
+                }
+                houseInfo = districtData || { mohoAina: '' };
+            } else {
+                console.log('No house district found - checking first feature properties:', 
+                    geoJsonLayers.house.data.features[0]?.properties);
+            }
+        }
+        
+        // Check Senate
+        let senateInfo = null;
+        console.log('Checking senate districts...');
+        if (geoJsonLayers.senate) {
+            const result = findDistrictByPoint(latlng, geoJsonLayers.senate.data, 'SLDUST');
+            if (result) {
+                console.log('Found senate district:', result.districtId);
+                senateInfo = sheetData.senate?.[result.districtId] || { mohoAina: '' };
+            }
+        }
+        
+        console.log('District results:', { countyInfo, houseInfo, senateInfo });
+        console.log('County name:', countyName);
+        console.log('Has county data:', !!countyInfo && countyInfo.mohoAina !== '');
+        console.log('Has house data:', !!houseInfo && houseInfo.mohoAina !== '');
+        console.log('Has senate data:', !!senateInfo && senateInfo.mohoAina !== '');
+        
+        // Create popup
+        const popupContent = createPopupContent(countyInfo, houseInfo, senateInfo);
+        
+        // Add marker with popup
+        currentMarker = L.marker(latlng).addTo(map);
+        currentMarker.bindPopup(popupContent, {
+            className: 'custom-popup',
+            maxWidth: 400
+        }).openPopup();
+    }
+    
+    // ============ POINT IN POLYGON LIBRARY ============
+    
+    const leafletPip = {
+        pointInLayer: function(point, layer, first) {
+            const results = [];
+            layer.eachLayer(function(l) {
+                if (l.feature && l.feature.geometry) {
+                    if (leafletPip.pointInPolygon(point, l.feature.geometry)) {
+                        results.push(l);
+                        if (first) return results;
+                    }
+                }
+            });
+            return results;
+        },
+        
+        pointInPolygon: function(point, geometry) {
+            if (geometry.type === 'Polygon') {
+                return leafletPip.pointInRing(point, geometry.coordinates[0]);
+            } else if (geometry.type === 'MultiPolygon') {
+                for (const polygon of geometry.coordinates) {
+                    if (leafletPip.pointInRing(point, polygon[0])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        },
+        
+        pointInRing: function(point, ring) {
+            let inside = false;
+            const x = point[0], y = point[1];
+            
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                const xi = ring[i][0], yi = ring[i][1];
+                const xj = ring[j][0], yj = ring[j][1];
+                
+                const intersect = ((yi > y) !== (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                
+                if (intersect) inside = !inside;
+            }
+            
+            return inside;
+        }
+    };
+    
+    // ============ INITIALIZE ============
+    
+    async function init() {
+        console.log('Initializing map...');
+        
+        // Check if Google Maps loaded
+        if (typeof google === 'undefined' || !google.maps) {
+            console.error('Google Maps failed to load!');
+            alert('Google Maps failed to load. Address autocomplete will not work, but you can still use the Search button.');
+        } else {
+            console.log('Google Maps loaded successfully');
+        }
+        
+        // Initialize the Leaflet map
+        initMap();
+        
+        await Promise.all([
+            loadSheetData(),
+            loadGeoJsonLayers(),
+            loadHeadshotList()
+        ]);
+        
+        // Initialize Google Places Autocomplete if Google Maps loaded
+        if (typeof google !== 'undefined' && google.maps) {
+            await initAutocomplete();
+        }
+        
+        // Set up event listeners
+        document.getElementById('search-button').addEventListener('click', () => handleSearch());
+        
+        // Add map click event listener
+        map.on('click', function(e) {
+            console.log('Map clicked at:', e.latlng);
+            handleMapClick(e.latlng);
+        });
+        
+        // Note: Can't add keypress listener to placeAutocomplete element the same way
+        // It handles Enter key internally
+        
+        console.log('Map ready!');
+    }
+    
+    // Wait for window to load before initializing
+    window.addEventListener('load', function() {
+        console.log('Window loaded, starting init...');
+        init();
+    });
+    
+</script>
 
-if __name__ == "__main__":
-    main()
+</body>
+</html>
