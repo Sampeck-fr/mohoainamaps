@@ -5,6 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- Google Fonts - distinctive choices for civic/Hawaiian context -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -20,10 +25,15 @@
     </script>
     
     <style>
+        :root {
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Public Sans', sans-serif;
+        }
+        
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: var(--font-body);
         }
         
         /* Side Panel - starts hidden off-screen */
@@ -96,6 +106,8 @@
             margin-bottom: 15px;
             color: #333;
             transition: font-size 0.5s ease;
+            font-family: var(--font-display);
+            letter-spacing: -0.5px;
         }
         
         #search-container.centered #search-title {
@@ -192,7 +204,7 @@
         }
         
         .popup-content {
-            font-family: Arial, sans-serif;
+            font-family: var(--font-body);
         }
         
         .popup-title {
@@ -204,6 +216,7 @@
             padding-bottom: 16px;
             border-bottom: 3px solid rgba(0, 0, 0, 0.1);
             letter-spacing: 0.5px;
+            font-family: var(--font-display);
         }
         
         .rep-row {
@@ -284,15 +297,15 @@
         }
         
         .rep-level {
-            font-weight: 700;
-            font-size: 18px;
+            font-weight: 800;
+            font-size: 14px;
             color: #1a1a1a;
             margin-bottom: 10px;
             transition: font-size 0.3s;
-            letter-spacing: 0.3px;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            font-size: 14px;
             opacity: 0.9;
+            font-family: var(--font-display);
         }
         
         .rep-divider {
@@ -307,6 +320,7 @@
             color: #2c3e50;
             margin-bottom: 6px;
             transition: font-size 0.3s;
+            font-family: var(--font-body);
         }
         
         .rep-name {
@@ -315,6 +329,7 @@
             line-height: 1.5;
             transition: font-size 0.3s;
             font-weight: 500;
+            font-family: var(--font-body);
         }
         
         .rep-name a {
