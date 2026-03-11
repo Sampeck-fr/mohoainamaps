@@ -823,7 +823,11 @@
             if (hasMoho) {
                 // Has Moho ʻĀina
                 line2 = 'Current Moho ʻĀina';
-                const website = row.data.mohoAinaWebsite;
+                let website = row.data.mohoAinaWebsite;
+                // Add https:// if missing
+                if (website && !website.match(/^https?:\/\//i)) {
+                    website = 'https://' + website;
+                }
                 if (website) {
                     line3 = `<a href="${website}" target="_blank">${row.data.mohoAina}</a>`;
                 } else {
@@ -833,7 +837,11 @@
                 // No Moho ʻĀina
                 line2 = 'Moho ʻĀina Needed! Current Pilautician:';
                 const incumbentName = row.data && row.data.name ? row.data.name : 'Unknown';
-                const incumbentWebsite = row.data && row.data.incumbentWebsite ? row.data.incumbentWebsite : '';
+                let incumbentWebsite = row.data && row.data.incumbentWebsite ? row.data.incumbentWebsite : '';
+                // Add https:// if missing
+                if (incumbentWebsite && !incumbentWebsite.match(/^https?:\/\//i)) {
+                    incumbentWebsite = 'https://' + incumbentWebsite;
+                }
                 
                 if (incumbentWebsite) {
                     line3 = `<a href="${incumbentWebsite}" target="_blank">${incumbentName}</a>`;
@@ -842,7 +850,7 @@
                 }
             }
             
-            // Add district number to office name
+            // Add district number to office name (skip if null for Ocean fallback)
             const officeWithDistrict = row.districtId ? `${row.office} ${row.districtId}` : row.office;
             
             html += `
@@ -1082,6 +1090,27 @@
         console.log('Has county data:', !!countyInfo && countyInfo.mohoAina !== '');
         console.log('Has house data:', !!houseInfo && houseInfo.mohoAina !== '');
         console.log('Has senate data:', !!senateInfo && senateInfo.mohoAina !== '');
+        
+        // Check if clicked outside all districts - use Ocean fallback
+        const outsideAllDistricts = !countyDistrictId && !houseDistrictId && !senateDistrictId;
+        
+        if (outsideAllDistricts) {
+            console.log('Click is outside all districts - using Ocean fallback');
+            // Look for Ocean row in house data (or adjust to whichever sheet has it)
+            const oceanData = sheetData.house?.['Ocean'] || sheetData.house?.['ocean'];
+            
+            if (oceanData) {
+                console.log('Found Ocean fallback data:', oceanData);
+                countyInfo = oceanData;
+                houseInfo = oceanData;
+                senateInfo = oceanData;
+                countyDistrictId = null;
+                houseDistrictId = null;
+                senateDistrictId = null;
+            } else {
+                console.log('WARNING: No Ocean fallback data found in house sheet');
+            }
+        }
         
         // Create content for sidebar
         const resultsContent = createPopupContent(countyInfo, countyDistrictId, houseInfo, houseDistrictId, senateInfo, senateDistrictId);
