@@ -706,7 +706,7 @@
         
         // Load House
         try {
-            const response = await fetch('House-v2.geojson');
+            const response = await fetch('House.geojson?v=' + Date.now());
             const data = await response.json();
             geoJsonLayers.house = {
                 layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
