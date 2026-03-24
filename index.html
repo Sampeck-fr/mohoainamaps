@@ -227,7 +227,7 @@
             border-radius: 12px;
             position: relative;
             overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: background 0.3s, box-shadow 0.3s, border-left-color 0.3s;
         }
         
         /* Background colors with vibrant gradients and shadows */
@@ -279,8 +279,13 @@
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="35" r="20" fill="%23999"/><path d="M 20 100 Q 20 70 50 70 Q 80 70 80 100 Z" fill="%23999"/></svg>');
             background-color: #f0f0f0;
             flex-shrink: 0;
-            transition: width 0.3s, height 0.3s, border-width 0.3s;
+            transition: width 0.3s, height 0.3s, border-width 0.3s, opacity 0.3s;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Hide/show views */
+        .moho-view, .incumbent-view {
+            transition: opacity 0.3s;
         }
         
         .has-moho {
@@ -348,25 +353,53 @@
         }
         
         .nominate-button {
-            display: inline-block;
+            display: block;
             margin-top: 12px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+            background: linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);
             color: white;
-            text-decoration: none;
+            text-decoration: underline;
             border-radius: 6px;
             font-weight: 600;
             font-size: 14px;
             font-family: var(--font-body);
-            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
             transition: all 0.2s;
             text-align: center;
         }
         
         .nominate-button:hover {
-            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
             box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
-            transform: translateY(-1px);
+        }
+        
+        .toggle-button {
+            display: block;
+            margin-top: 12px;
+            padding: 10px 20px;
+            text-decoration: underline;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+        }
+        
+        .toggle-button.show-incumbent {
+            background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+            color: white;
+        }
+        
+        .toggle-button.show-moho {
+            background: linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);
+            color: white;
+        }
+        
+        .toggle-button:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
@@ -466,6 +499,11 @@
     }
     
     // ============ UTILITY FUNCTIONS ============
+    
+    function normalizeName(name) {
+        if (!name) return '';
+        return name.toLowerCase().replace(/\s+/g, '').trim();
+    }
     
     function trimLeadingZeros(str) {
         if (!str) return str;
@@ -799,17 +837,20 @@
             {
                 office: 'County Council',
                 districtId: countyDistrictId,
-                data: countyInfo
+                data: countyInfo,
+                id: 'county'
             },
             {
                 office: 'State House',
                 districtId: houseDistrictId,
-                data: houseInfo
+                data: houseInfo,
+                id: 'house'
             },
             {
                 office: 'State Senate',
                 districtId: senateDistrictId,
-                data: senateInfo
+                data: senateInfo,
+                id: 'senate'
             }
         ];
         
@@ -818,77 +859,159 @@
         
         for (const row of rows) {
             const hasMoho = row.data && row.data.mohoAina;
+            
+            // Check if Moho ʻĀina IS the incumbent (case-insensitive, ignore whitespace)
+            const mohoName = normalizeName(row.data?.mohoAina);
+            const incumbentName = normalizeName(row.data?.name);
+            const isSamePerson = hasMoho && mohoName && incumbentName && mohoName === incumbentName;
+            
+            // Generate unique card ID
+            const cardId = `card-${row.id}-${row.districtId || 'ocean'}`;
+            
+            // Determine initial view state
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
             
-            // Get headshot URL directly from spreadsheet columns (expecting full URLs)
-            let headshotUrl = null;
-            if (hasMoho && row.data.mohoAinaHeadshot) {
-                headshotUrl = row.data.mohoAinaHeadshot.trim();
-                console.log(`Using Moho ʻĀina headshot URL: ${headshotUrl}`);
-            } else if (row.data && row.data.incumbentHeadshot) {
-                headshotUrl = row.data.incumbentHeadshot.trim();
-                console.log(`Using incumbent headshot URL: ${headshotUrl}`);
+            // Get both headshots
+            const mohoHeadshot = row.data?.mohoAinaHeadshot?.trim() || '';
+            const incumbentHeadshot = row.data?.incumbentHeadshot?.trim() || '';
+            
+            // Get both websites
+            let mohoWebsite = row.data?.mohoAinaWebsite || '';
+            if (mohoWebsite && !mohoWebsite.match(/^https?:\/\//i)) {
+                mohoWebsite = 'https://' + mohoWebsite;
             }
             
-            if (!headshotUrl) {
-                console.log(`No headshot found for ${row.office} - mohoAinaHeadshot: "${row.data?.mohoAinaHeadshot}", incumbentHeadshot: "${row.data?.incumbentHeadshot}"`);
+            let incumbentWebsite = row.data?.incumbentWebsite || '';
+            if (incumbentWebsite && !incumbentWebsite.match(/^https?:\/\//i)) {
+                incumbentWebsite = 'https://' + incumbentWebsite;
             }
             
-            // Build oval with headshot or default silhouette
-            let ovalStyle = `class="rep-oval"`;
-            if (headshotUrl) {
-                ovalStyle = `class="rep-oval" style="background-image: url('${headshotUrl}')"`;
-            }
+            // Build display names
+            const mohoDisplayName = row.data?.mohoAina || '';
+            const incumbentDisplayName = row.data?.name || 'Unknown';
             
-            // Build the content lines
-            let line2, line3, line4 = ''; // line4 for optional nomination button
-            if (hasMoho) {
-                // Has Moho ʻĀina
-                line2 = 'Current Moho ʻĀina';
-                let website = row.data.mohoAinaWebsite;
-                // Add https:// if missing
-                if (website && !website.match(/^https?:\/\//i)) {
-                    website = 'https://' + website;
-                }
-                if (website) {
-                    line3 = `<a href="${website}" target="_blank">${row.data.mohoAina}</a>`;
-                } else {
-                    line3 = row.data.mohoAina;
-                }
-            } else {
-                // No Moho ʻĀina
-                line2 = 'Current Politician- Moho ʻĀina Needed';
-                const incumbentName = row.data && row.data.name ? row.data.name : 'Unknown';
-                let incumbentWebsite = row.data && row.data.incumbentWebsite ? row.data.incumbentWebsite : '';
-                // Add https:// if missing
-                if (incumbentWebsite && !incumbentWebsite.match(/^https?:\/\//i)) {
-                    incumbentWebsite = 'https://' + incumbentWebsite;
-                }
-                
-                if (incumbentWebsite) {
-                    line3 = `<a href="${incumbentWebsite}" target="_blank">${incumbentName}</a>`;
-                } else {
-                    line3 = incumbentName;
-                }
-                
-                // Add nomination button
-                line4 = `<a href="https://mohoaina.com/nomination-form" target="_blank" class="nominate-button">Nominate a Moho ʻĀina</a>`;
-            }
-            
-            // Add district number to office name (skip if null for Ocean fallback)
+            // Add district number to office name
             const officeWithDistrict = row.districtId ? `${row.office} ${row.districtId}` : row.office;
             
-            html += `
-                <div class="rep-row ${mohoClass}">
-                    <div ${ovalStyle}></div>
-                    <div class="rep-info">
-                        <div class="rep-level">${officeWithDistrict}</div>
-                        <hr class="rep-divider">
-                        <div class="rep-status">${line2}</div>
-                        <div class="rep-name">${line3}${line4}</div>
+            // Build card HTML
+            if (isSamePerson) {
+                // Special case: Moho ʻĀina IS the incumbent
+                const headshot = mohoHeadshot || incumbentHeadshot;
+                const ovalStyle = headshot ? 
+                    `class="rep-oval" style="background-image: url('${headshot}')"` : 
+                    `class="rep-oval"`;
+                
+                const nameLink = mohoWebsite ? 
+                    `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>` : 
+                    mohoDisplayName;
+                
+                html += `
+                    <div class="rep-row has-moho" id="${cardId}">
+                        <div ${ovalStyle}></div>
+                        <div class="rep-info">
+                            <div class="rep-level">${officeWithDistrict}</div>
+                            <hr class="rep-divider">
+                            <div class="rep-status">Current Politician IS Moho ʻĀina</div>
+                            <div class="rep-name">${nameLink}</div>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else if (hasMoho) {
+                // Has Moho ʻĀina - show toggle functionality
+                const mohoOvalStyle = mohoHeadshot ? 
+                    `style="background-image: url('${mohoHeadshot}')"` : '';
+                const incumbentOvalStyle = incumbentHeadshot ? 
+                    `style="background-image: url('${incumbentHeadshot}')"` : '';
+                
+                const mohoNameLink = mohoWebsite ? 
+                    `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>` : 
+                    mohoDisplayName;
+                
+                const incumbentNameLink = incumbentWebsite ? 
+                    `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>` : 
+                    incumbentDisplayName;
+                
+                html += `
+                    <div class="rep-row has-moho" id="${cardId}" data-view="moho">
+                        <div class="rep-oval moho-photo" ${mohoOvalStyle}></div>
+                        <div class="rep-oval incumbent-photo" ${incumbentOvalStyle} style="display:none;"></div>
+                        <div class="rep-info">
+                            <div class="rep-level">${officeWithDistrict}</div>
+                            <hr class="rep-divider">
+                            <div class="moho-view">
+                                <div class="rep-status">Current Moho ʻĀina</div>
+                                <div class="rep-name">${mohoNameLink}</div>
+                                <button class="toggle-button show-incumbent" onclick="toggleCard('${cardId}', 'incumbent')">See Current Politician</button>
+                            </div>
+                            <div class="incumbent-view" style="display:none;">
+                                <div class="rep-status">Current Politician- Moho ʻĀina Needed</div>
+                                <div class="rep-name">${incumbentNameLink}</div>
+                                <button class="toggle-button show-moho" onclick="toggleCard('${cardId}', 'moho')">See Current Moho ʻĀina</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // No Moho ʻĀina - standard gray card with nomination button
+                const ovalStyle = incumbentHeadshot ? 
+                    `class="rep-oval" style="background-image: url('${incumbentHeadshot}')"` : 
+                    `class="rep-oval"`;
+                
+                const nameLink = incumbentWebsite ? 
+                    `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>` : 
+                    incumbentDisplayName;
+                
+                html += `
+                    <div class="rep-row no-moho" id="${cardId}">
+                        <div ${ovalStyle}></div>
+                        <div class="rep-info">
+                            <div class="rep-level">${officeWithDistrict}</div>
+                            <hr class="rep-divider">
+                            <div class="rep-status">Current Politician- Moho ʻĀina Needed</div>
+                            <div class="rep-name">${nameLink}</div>
+                            <a href="https://mohoaina.com/nomination-form" target="_blank" class="nominate-button">Nominate a Moho ʻĀina</a>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
+    // Toggle card between Moho ʻĀina and incumbent view
+    function toggleCard(cardId, view) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        
+        const mohoPhoto = card.querySelector('.moho-photo');
+        const incumbentPhoto = card.querySelector('.incumbent-photo');
+        const mohoView = card.querySelector('.moho-view');
+        const incumbentView = card.querySelector('.incumbent-view');
+        
+        if (view === 'incumbent') {
+            // Show incumbent
+            card.classList.remove('has-moho');
+            card.classList.add('no-moho');
+            card.dataset.view = 'incumbent';
+            
+            if (mohoPhoto) mohoPhoto.style.display = 'none';
+            if (incumbentPhoto) incumbentPhoto.style.display = 'block';
+            if (mohoView) mohoView.style.display = 'none';
+            if (incumbentView) incumbentView.style.display = 'block';
+        } else {
+            // Show Moho ʻĀina
+            card.classList.remove('no-moho');
+            card.classList.add('has-moho');
+            card.dataset.view = 'moho';
+            
+            if (mohoPhoto) mohoPhoto.style.display = 'block';
+            if (incumbentPhoto) incumbentPhoto.style.display = 'none';
+            if (mohoView) mohoView.style.display = 'block';
+            if (incumbentView) incumbentView.style.display = 'none';
+        }
+    }
         }
         
         html += '</div>';
