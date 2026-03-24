@@ -973,8 +973,13 @@
                 // Has Moho ʻĀina - show toggle functionality
                 const mohoOvalStyle = mohoHeadshot ? 
                     `style="background-image: url('${mohoHeadshot}')"` : '';
-                const incumbentOvalStyle = incumbentHeadshot ? 
-                    `style="background-image: url('${incumbentHeadshot}')"` : '';
+                
+                // Incumbent photo needs display:none AND background-image in one style attribute
+                let incumbentOvalStyle = 'style="display:none; position:absolute; left:24px;';
+                if (incumbentHeadshot) {
+                    incumbentOvalStyle += ` background-image: url('${incumbentHeadshot}');`;
+                }
+                incumbentOvalStyle += '"';
                 
                 const mohoNameLink = mohoWebsite ? 
                     `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>` : 
@@ -987,7 +992,7 @@
                 html += `
                     <div class="rep-row has-moho" id="${cardId}" data-view="moho">
                         <div class="rep-oval moho-photo" ${mohoOvalStyle}></div>
-                        <div class="rep-oval incumbent-photo" ${incumbentOvalStyle} style="display:none; position:absolute; left:24px;"></div>
+                        <div class="rep-oval incumbent-photo" ${incumbentOvalStyle}></div>
                         <div class="rep-info">
                             <div class="rep-level">${officeWithDistrict}</div>
                             <hr class="rep-divider">
