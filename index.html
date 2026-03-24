@@ -28,12 +28,23 @@
         :root {
             --font-display: 'Outfit', sans-serif;
             --font-body: 'Public Sans', sans-serif;
+            
+            /* Bold color system */
+            --green-vibrant: #00c853;
+            --green-deep: #00a344;
+            --green-dark: #00762e;
+            --gray-slate: #424242;
+            --gray-medium: #616161;
+            --gray-light: #9e9e9e;
+            --white: #ffffff;
+            --black: #1a1a1a;
         }
         
         body {
             margin: 0;
             padding: 0;
             font-family: var(--font-body);
+            background: #fafafa;
         }
         
         /* Side Panel - starts hidden off-screen */
@@ -102,16 +113,18 @@
         
         #search-title {
             font-size: 24px;
-            font-weight: bold;
+            font-weight: 800;
             margin-bottom: 15px;
-            color: #333;
+            color: var(--black);
             transition: font-size 0.5s ease;
             font-family: var(--font-display);
-            letter-spacing: -0.5px;
+            letter-spacing: -1px;
+            text-transform: uppercase;
         }
         
         #search-container.centered #search-title {
-            font-size: 32px;
+            font-size: 36px;
+            letter-spacing: -1.5px;
         }
         
         #search-input-container {
@@ -209,43 +222,49 @@
         
         .popup-title {
             text-align: center;
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            color: #1a1a1a;
-            padding-bottom: 16px;
-            border-bottom: 4px solid rgba(0, 0, 0, 0.15);
-            letter-spacing: 0.5px;
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 28px;
+            color: var(--black);
+            padding-bottom: 20px;
+            border-bottom: 4px solid var(--black);
+            letter-spacing: 1px;
+            text-transform: uppercase;
             font-family: var(--font-display);
         }
         
         .rep-row {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 20px;
-            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 24px;
+            border-radius: 0;
             position: relative;
             overflow: hidden;
-            transition: background 0.3s, box-shadow 0.3s, border-left-color 0.3s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid;
         }
         
         /* Background colors with vibrant gradients and shadows */
         .rep-row.has-moho {
-            background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
-            box-shadow: 0 4px 12px rgba(56, 142, 60, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
-            border-left: 5px solid #2e7d32;
+            background: var(--green-vibrant);
+            box-shadow: 0 6px 0 var(--green-dark), 0 10px 25px rgba(0, 200, 83, 0.3);
+            border-color: var(--green-dark);
         }
         
         .rep-row.no-moho {
-            background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
-            box-shadow: 0 4px 12px rgba(97, 97, 97, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
-            border-left: 5px solid #757575;
+            background: var(--gray-slate);
+            box-shadow: 0 6px 0 var(--black), 0 10px 25px rgba(0, 0, 0, 0.4);
+            border-color: var(--black);
         }
         
         .rep-row:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 var(--green-dark), 0 12px 30px rgba(0, 200, 83, 0.4);
+        }
+        
+        .rep-row.no-moho:hover {
+            box-shadow: 0 8px 0 var(--black), 0 12px 30px rgba(0, 0, 0, 0.5);
         }
         
         /* Fade-in animation for when cards appear */
@@ -272,7 +291,7 @@
             width: 150px;
             height: 150px;
             border-radius: 50%;
-            border: 5px solid white;
+            border: 6px solid var(--white);
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -280,7 +299,7 @@
             background-color: #f0f0f0;
             flex-shrink: 0;
             transition: width 0.3s, height 0.3s, border-width 0.3s, opacity 0.3s;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
         }
         
         /* Hide/show views */
@@ -302,104 +321,138 @@
         }
         
         .rep-level {
-            font-weight: 800;
-            font-size: 14px;
-            color: rgba(0, 0, 0, 0.85);
-            margin-bottom: 10px;
+            font-weight: 900;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 12px;
             transition: font-size 0.3s;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             text-transform: uppercase;
             font-family: var(--font-display);
         }
         
         .rep-divider {
-            margin: 10px 0;
+            margin: 12px 0;
             border: none;
-            border-top: 2px solid rgba(0, 0, 0, 0.15);
+            border-top: 3px solid rgba(255, 255, 255, 0.3);
         }
         
         .rep-status {
-            font-weight: 600;
-            font-size: 15px;
-            color: rgba(0, 0, 0, 0.75);
-            margin-bottom: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 8px;
             transition: font-size 0.3s;
             font-family: var(--font-body);
+            letter-spacing: 0.5px;
         }
         
         .rep-name {
-            font-size: 16px;
-            color: rgba(0, 0, 0, 0.8);
-            line-height: 1.5;
+            font-size: 18px;
+            color: var(--white);
+            line-height: 1.4;
             transition: font-size 0.3s;
-            font-weight: 500;
+            font-weight: 600;
             font-family: var(--font-body);
         }
         
         .rep-name a {
-            color: #1565c0;
+            color: var(--white);
             text-decoration: none;
-            border-bottom: 2px solid rgba(21, 101, 192, 0.4);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
             transition: all 0.2s;
-            font-weight: 600;
+            font-weight: 700;
         }
         
         .rep-name a:hover {
-            color: #0d47a1;
-            border-bottom-color: #0d47a1;
-            background: rgba(255, 255, 255, 0.4);
+            border-bottom-color: var(--white);
+            background: rgba(255, 255, 255, 0.1);
             padding: 2px 4px;
             margin: -2px -4px;
         }
         
         .nominate-button {
             display: block;
-            margin-top: 12px;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);
-            color: white;
-            text-decoration: underline;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            font-family: var(--font-body);
-            transition: all 0.2s;
+            margin-top: 16px;
+            padding: 14px 24px;
+            background: var(--green-vibrant);
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 2px;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: var(--font-display);
+            letter-spacing: 1px;
+            text-transform: uppercase;
             text-align: center;
+            border: 2px solid var(--green-dark);
+            box-shadow: 0 4px 0 var(--green-dark);
+            transition: all 0.15s ease;
+            position: relative;
+            top: 0;
         }
         
         .nominate-button:hover {
-            background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
-            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+            top: 2px;
+            box-shadow: 0 2px 0 var(--green-dark);
+            background: var(--green-deep);
+        }
+        
+        .nominate-button:active {
+            top: 4px;
+            box-shadow: none;
         }
         
         .toggle-button {
             display: block;
-            margin-top: 12px;
-            padding: 10px 20px;
-            text-decoration: underline;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            font-family: var(--font-body);
-            transition: all 0.2s;
+            margin-top: 16px;
+            padding: 14px 24px;
+            text-decoration: none;
+            border-radius: 2px;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: var(--font-display);
+            letter-spacing: 1px;
+            text-transform: uppercase;
             text-align: center;
             cursor: pointer;
-            border: none;
+            border: 2px solid;
+            box-shadow: 0 4px 0;
+            transition: all 0.15s ease;
             width: 100%;
+            position: relative;
+            top: 0;
         }
         
         .toggle-button.show-incumbent {
-            background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
-            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--white);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        }
+        
+        .toggle-button.show-incumbent:hover {
+            background: rgba(255, 255, 255, 0.3);
+            top: 2px;
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
         }
         
         .toggle-button.show-moho {
-            background: linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);
-            color: white;
+            background: var(--green-vibrant);
+            color: var(--white);
+            border-color: var(--green-dark);
+            box-shadow: 0 4px 0 var(--green-dark);
         }
         
-        .toggle-button:hover {
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        .toggle-button.show-moho:hover {
+            background: var(--green-deep);
+            top: 2px;
+            box-shadow: 0 2px 0 var(--green-dark);
+        }
+        
+        .toggle-button:active {
+            top: 4px;
+            box-shadow: none;
         }
     </style>
 </head>
@@ -934,7 +987,7 @@
                 html += `
                     <div class="rep-row has-moho" id="${cardId}" data-view="moho">
                         <div class="rep-oval moho-photo" ${mohoOvalStyle}></div>
-                        <div class="rep-oval incumbent-photo" ${incumbentOvalStyle} style="display:none;"></div>
+                        <div class="rep-oval incumbent-photo" ${incumbentOvalStyle} style="display:none; position:absolute; left:24px;"></div>
                         <div class="rep-info">
                             <div class="rep-level">${officeWithDistrict}</div>
                             <hr class="rep-divider">
@@ -997,7 +1050,11 @@
             card.dataset.view = 'incumbent';
             
             if (mohoPhoto) mohoPhoto.style.display = 'none';
-            if (incumbentPhoto) incumbentPhoto.style.display = 'block';
+            if (incumbentPhoto) {
+                incumbentPhoto.style.display = 'block';
+                incumbentPhoto.style.position = 'relative';
+                incumbentPhoto.style.left = '0';
+            }
             if (mohoView) mohoView.style.display = 'none';
             if (incumbentView) incumbentView.style.display = 'block';
         } else {
@@ -1007,7 +1064,10 @@
             card.dataset.view = 'moho';
             
             if (mohoPhoto) mohoPhoto.style.display = 'block';
-            if (incumbentPhoto) incumbentPhoto.style.display = 'none';
+            if (incumbentPhoto) {
+                incumbentPhoto.style.display = 'none';
+                incumbentPhoto.style.position = 'absolute';
+            }
             if (mohoView) mohoView.style.display = 'block';
             if (incumbentView) incumbentView.style.display = 'none';
         }
@@ -1382,7 +1442,7 @@
         const headshots = document.querySelectorAll('.rep-oval');
         const baseSize = 150;
         const newSize = baseSize * scaleFactor;
-        const baseBorder = 5;
+        const baseBorder = 6;
         const newBorder = Math.max(3, baseBorder * scaleFactor);
         
         headshots.forEach(headshot => {
@@ -1394,22 +1454,22 @@
         // Scale fonts
         const titles = document.querySelectorAll('.popup-title');
         titles.forEach(title => {
-            title.style.fontSize = `${22 * scaleFactor}px`;
+            title.style.fontSize = `${24 * scaleFactor}px`;
         });
         
         const levels = document.querySelectorAll('.rep-level');
         levels.forEach(level => {
-            level.style.fontSize = `${14 * scaleFactor}px`;
+            level.style.fontSize = `${15 * scaleFactor}px`;
         });
         
         const statuses = document.querySelectorAll('.rep-status');
         statuses.forEach(status => {
-            status.style.fontSize = `${15 * scaleFactor}px`;
+            status.style.fontSize = `${14 * scaleFactor}px`;
         });
         
         const names = document.querySelectorAll('.rep-name');
         names.forEach(name => {
-            name.style.fontSize = `${16 * scaleFactor}px`;
+            name.style.fontSize = `${18 * scaleFactor}px`;
         });
     }
     
