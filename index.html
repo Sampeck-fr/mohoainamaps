@@ -346,6 +346,28 @@
             padding: 2px 4px;
             margin: -2px -4px;
         }
+        
+        .nominate-button {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            font-family: var(--font-body);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .nominate-button:hover {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -819,7 +841,7 @@
             }
             
             // Build the content lines
-            let line2, line3;
+            let line2, line3, line4 = ''; // line4 for optional nomination button
             if (hasMoho) {
                 // Has Moho ʻĀina
                 line2 = 'Current Moho ʻĀina';
@@ -848,6 +870,9 @@
                 } else {
                     line3 = incumbentName;
                 }
+                
+                // Add nomination button
+                line4 = `<a href="https://mohoaina.com/nomination-form" target="_blank" class="nominate-button">Nominate a Moho ʻĀina</a>`;
             }
             
             // Add district number to office name (skip if null for Ocean fallback)
@@ -860,7 +885,7 @@
                         <div class="rep-level">${officeWithDistrict}</div>
                         <hr class="rep-divider">
                         <div class="rep-status">${line2}</div>
-                        <div class="rep-name">${line3}</div>
+                        <div class="rep-name">${line3}${line4}</div>
                     </div>
                 </div>
             `;
