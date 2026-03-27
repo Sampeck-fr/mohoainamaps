@@ -454,6 +454,41 @@
             top: 4px;
             box-shadow: none;
         }
+        
+        /* Verified badge */
+        .verified-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--white);
+            font-size: 11px;
+            font-weight: 800;
+            font-family: var(--font-display);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 2px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        /* Muted green for unverified */
+        .rep-row.has-moho.unverified {
+            background: #66bb6a;
+            border-color: #4caf50;
+            box-shadow: 0 6px 0 #4caf50, 0 10px 25px rgba(102, 187, 106, 0.3);
+        }
+        
+        .rep-row.has-moho.unverified:hover {
+            box-shadow: 0 8px 0 #4caf50, 0 12px 30px rgba(102, 187, 106, 0.4);
+        }
+        
+        .pending-text {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            margin-top: 4px;
+            font-family: var(--font-body);
+        }
     </style>
 </head>
 <body>
@@ -609,6 +644,7 @@
         const incumbentWebsiteIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('website'));
         const mohoHeadshotIndex = headers.findIndex(h => h.includes('moho') && h.includes('aina') && h.includes('filename'));
         const incumbentHeadshotIndex = headers.findIndex(h => h.includes('incumbent') && h.includes('filename'));
+        const verifiedIndex = headers.findIndex(h => h.includes('verified'));
         
         console.log('Column mapping:', { 
             idIndex, 
@@ -617,7 +653,8 @@
             mohoWebsiteIndex, 
             incumbentWebsiteIndex,
             mohoHeadshotIndex,
-            incumbentHeadshotIndex
+            incumbentHeadshotIndex,
+            verifiedIndex
         });
         
         const data = {};
@@ -639,7 +676,8 @@
                 mohoAinaWebsite: mohoWebsiteIndex !== -1 ? (values[mohoWebsiteIndex] || '') : '',
                 incumbentWebsite: incumbentWebsiteIndex !== -1 ? (values[incumbentWebsiteIndex] || '') : '',
                 mohoAinaHeadshot: mohoHeadshotIndex !== -1 ? (values[mohoHeadshotIndex] || '') : '',
-                incumbentHeadshot: incumbentHeadshotIndex !== -1 ? (values[incumbentHeadshotIndex] || '') : ''
+                incumbentHeadshot: incumbentHeadshotIndex !== -1 ? (values[incumbentHeadshotIndex] || '') : '',
+                verified: verifiedIndex !== -1 ? (values[verifiedIndex]?.toLowerCase().trim() === 'verified') : false
             };
             
             // Log first few rows for debugging
@@ -924,6 +962,12 @@
             // Determine initial view state
             const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
             
+            // Check verified status
+            const isVerified = row.data?.verified === true;
+            const verifiedClass = (hasMoho && !isVerified) ? 'unverified' : '';
+            const verifiedBadge = isVerified ? '<span class="verified-badge">✓ Verified</span>' : '';
+            const pendingNote = (hasMoho && !isVerified) ? '<div class="pending-text">(Pending verification)</div>' : '';
+            
             // Get both headshots
             const mohoHeadshot = row.data?.mohoAinaHeadshot?.trim() || '';
             const incumbentHeadshot = row.data?.incumbentHeadshot?.trim() || '';
@@ -959,13 +1003,14 @@
                     mohoDisplayName;
                 
                 html += `
-                    <div class="rep-row has-moho" id="${cardId}">
+                    <div class="rep-row has-moho ${verifiedClass}" id="${cardId}">
                         <div ${ovalStyle}></div>
                         <div class="rep-info">
                             <div class="rep-level">${officeWithDistrict}</div>
                             <hr class="rep-divider">
-                            <div class="rep-status">Current Politician IS Moho ʻĀina</div>
+                            <div class="rep-status">Current Politician IS Moho ʻĀina${verifiedBadge}</div>
                             <div class="rep-name">${nameLink}</div>
+                            ${pendingNote}
                         </div>
                     </div>
                 `;
@@ -990,15 +1035,16 @@
                     incumbentDisplayName;
                 
                 html += `
-                    <div class="rep-row has-moho" id="${cardId}" data-view="moho">
+                    <div class="rep-row has-moho ${verifiedClass}" id="${cardId}" data-view="moho">
                         <div class="rep-oval moho-photo" ${mohoOvalStyle}></div>
                         <div class="rep-oval incumbent-photo" ${incumbentOvalStyle}></div>
                         <div class="rep-info">
                             <div class="rep-level">${officeWithDistrict}</div>
                             <hr class="rep-divider">
                             <div class="moho-view">
-                                <div class="rep-status">Current Moho ʻĀina</div>
+                                <div class="rep-status">Current Moho ʻĀina${verifiedBadge}</div>
                                 <div class="rep-name">${mohoNameLink}</div>
+                                ${pendingNote}
                                 <button class="toggle-button show-incumbent" onclick="toggleCard('${cardId}', 'incumbent')">See Current Politician</button>
                             </div>
                             <div class="incumbent-view" style="display:none;">
@@ -1047,11 +1093,13 @@
         const incumbentPhoto = card.querySelector('.incumbent-photo');
         const mohoView = card.querySelector('.moho-view');
         const incumbentView = card.querySelector('.incumbent-view');
+        const isUnverified = card.classList.contains('unverified');
         
         if (view === 'incumbent') {
             // Show incumbent
             card.classList.remove('has-moho');
             card.classList.add('no-moho');
+            if (isUnverified) card.classList.remove('unverified'); // Remove unverified when showing incumbent
             card.dataset.view = 'incumbent';
             
             if (mohoPhoto) mohoPhoto.style.display = 'none';
@@ -1066,6 +1114,7 @@
             // Show Moho ʻĀina
             card.classList.remove('no-moho');
             card.classList.add('has-moho');
+            if (isUnverified) card.classList.add('unverified'); // Re-add unverified when showing moho
             card.dataset.view = 'moho';
             
             if (mohoPhoto) mohoPhoto.style.display = 'block';
