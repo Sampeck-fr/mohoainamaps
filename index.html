@@ -532,6 +532,23 @@
                 font-size: 24px;
             }
             
+            /* Override desktop centered styles for mobile */
+            #search-container.centered #address-input,
+            #search-container.centered gmp-place-autocomplete {
+                width: 100% !important;
+                flex: 1;
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+            
+            #search-container.centered #search-button {
+                width: 100% !important;
+                padding: 12px 20px !important;
+                font-size: 14px !important;
+                margin-top: 10px;
+                display: block !important;
+            }
+            
             /* Input and button visible on mobile */
             #address-input {
                 font-size: 16px;
@@ -545,6 +562,12 @@
                 padding: 12px 20px;
                 width: 100%;
                 margin-top: 10px;
+                display: block !important;
+            }
+            
+            /* Make sure Google autocomplete fits */
+            gmp-place-autocomplete {
+                width: 100% !important;
                 display: block !important;
             }
             
