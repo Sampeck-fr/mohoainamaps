@@ -509,30 +509,43 @@
                 display: none;
             }
             
-            /* Centered search on mobile */
+            /* Search at top on mobile, not centered */
             #search-container.centered {
-                width: 90%;
-                max-width: 400px;
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: calc(100% - 40px);
+                max-width: 500px;
                 padding: 20px;
+                z-index: 2000;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
             }
             
             #search-title {
-                font-size: 20px;
+                font-size: 18px;
             }
             
             #search-container.centered #search-title {
-                font-size: 28px;
+                font-size: 24px;
             }
             
-            /* Smaller input on mobile */
+            /* Input and button visible on mobile */
             #address-input {
                 font-size: 16px;
                 padding: 12px;
+                width: 100%;
+                box-sizing: border-box;
             }
             
             #search-button {
                 font-size: 14px;
                 padding: 12px 20px;
+                width: 100%;
+                margin-top: 10px;
+                display: block !important;
             }
             
             /* Smaller cards on mobile */
@@ -592,8 +605,13 @@
         /* Very small mobile devices */
         @media (max-width: 480px) {
             #search-container.centered {
-                width: 95%;
+                width: calc(100% - 30px);
                 padding: 15px;
+                top: 15px;
+            }
+            
+            #search-container.centered #search-title {
+                font-size: 20px;
             }
             
             .rep-oval {
