@@ -454,7 +454,136 @@
             top: 4px;
             box-shadow: none;
         }
-        
+
+        /* At-large county banner + expander (Maui, Kauai), nested inside
+           the council card so the section visually belongs to that card. */
+
+        /* Wrap photo+info so it can sit beside (or above) the at-large section. */
+        .rep-main {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* When a card carries at-large extras, stack rep-main + section vertically. */
+        .rep-row.has-extras {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        /* Suppress the outer card's hover lift when extras are present —
+           interacting with inner cards shouldn't drag the whole card up. */
+        .rep-row.has-extras:hover {
+            transform: none;
+            box-shadow: 0 6px 0 var(--green-dark), 0 10px 25px rgba(0, 200, 83, 0.3);
+        }
+        .rep-row.no-moho.has-extras:hover {
+            transform: none;
+            box-shadow: 0 6px 0 var(--black), 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+        .rep-row.has-moho.unverified.has-extras:hover {
+            transform: none;
+            box-shadow: 0 6px 0 var(--green-dark), 0 10px 25px rgba(129, 199, 132, 0.3);
+        }
+
+        .at-large-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 3px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .rep-row.no-moho .at-large-section {
+            border-top-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .at-large-banner {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px dashed var(--green-dark);
+            color: var(--green-dark);
+            font-family: var(--font-display);
+            font-weight: 800;
+            text-align: center;
+            padding: 16px 18px;
+            margin: 0 0 16px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .rep-row.no-moho .at-large-banner {
+            background: rgba(0, 0, 0, 0.22);
+            border-color: var(--white);
+            color: var(--white);
+        }
+
+        .at-large-toggle {
+            display: block;
+            width: 100%;
+            padding: 14px 24px;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--green-dark);
+            border: 3px solid var(--green-dark);
+            box-shadow: 0 4px 0 var(--green-dark);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 0;
+            transition: all 0.15s ease;
+            position: relative;
+            top: 0;
+        }
+
+        .at-large-toggle:hover {
+            top: 2px;
+            box-shadow: 0 2px 0 var(--green-dark);
+            background: var(--white);
+            color: var(--green-deep);
+        }
+
+        .at-large-toggle:active {
+            top: 4px;
+            box-shadow: none;
+        }
+
+        .rep-row.no-moho .at-large-toggle {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--gray-slate);
+            border-color: var(--black);
+            box-shadow: 0 4px 0 var(--black);
+        }
+
+        .rep-row.no-moho .at-large-toggle:hover {
+            background: var(--white);
+            color: var(--black);
+            box-shadow: 0 2px 0 var(--black);
+        }
+
+        .rep-row.no-moho .at-large-toggle:active {
+            box-shadow: none;
+        }
+
+        .at-large-extras {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .at-large-extras.open {
+            display: block;
+        }
+
+        /* Inner extras cards keep their own colors; just tighten spacing. */
+        .at-large-extras .rep-row {
+            margin-bottom: 12px;
+        }
+        .at-large-extras .rep-row:last-child {
+            margin-bottom: 0;
+        }
+
         /* Verified badge */
         .verified-badge {
             display: inline-block;
@@ -684,7 +813,14 @@
         hawaii: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv',
         maui: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1505508928&single=true&output=csv',
         honolulu: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=978802498&single=true&output=csv',
-        kauai: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQziAtuCEyrfaYovfFOfKlKqETRvXGe0fwmiaXuV0xhIZC-8rcLD8SYbsZyB911yVkvepLvdYCRm-At/pub?gid=1643797979&single=true&output=csv'
+        kauai: null  // Kauai sheet not yet populated — replace with published CSV URL when ready
+    };
+
+    // Counties where every voter elects every seat (with residency-area requirements).
+    // Value = total number of at-large seats on that county council.
+    const AT_LARGE_COUNTIES = {
+        maui: 9,
+        kauai: 7
     };
     
     // ============ GLOBAL VARIABLES ============
@@ -984,11 +1120,15 @@
     async function loadSheetData() {
         try {
             const promises = Object.entries(SHEET_URLS).map(async ([key, url]) => {
+                if (!url) {
+                    sheetData[key] = {};
+                    return;
+                }
                 const response = await fetch(url);
                 const text = await response.text();
                 sheetData[key] = parseCSV(text);
             });
-            
+
             await Promise.all(promises);
             console.log('Sheet data loaded:', sheetData);
         } catch (error) {
@@ -1088,7 +1228,7 @@
     
     // ============ CREATE POPUP CONTENT ============
     
-    function createPopupContent(countyInfo, countyDistrictId, houseInfo, houseDistrictId, senateInfo, senateDistrictId) {
+    function createPopupContent(countyInfo, countyDistrictId, houseInfo, houseDistrictId, senateInfo, senateDistrictId, countyName) {
         const rows = [
             {
                 office: 'County Council',
@@ -1109,66 +1249,74 @@
                 id: 'senate'
             }
         ];
-        
+
         let html = '<div class="popup-content">';
         html += '<div class="popup-title">Your Representatives</div>';
-        
+
         for (const row of rows) {
-            const hasMoho = row.data && row.data.mohoAina;
-            
-            // Check if Moho ʻĀina IS the incumbent (case-insensitive, ignore whitespace)
-            const mohoName = normalizeName(row.data?.mohoAina);
-            const incumbentName = normalizeName(row.data?.name);
-            const isSamePerson = hasMoho && mohoName && incumbentName && mohoName === incumbentName;
-            
-            // Generate unique card ID
-            const cardId = `card-${row.id}-${row.districtId || 'ocean'}`;
-            
-            // Determine initial view state
-            const mohoClass = hasMoho ? 'has-moho' : 'no-moho';
-            
-            // Check verified status
-            const isVerified = row.data?.verified === true;
-            const verifiedClass = (hasMoho && !isVerified) ? 'unverified' : '';
-            const verifiedBadge = isVerified ? '<span class="verified-badge">✓ Verified</span>' : '';
-            const pendingNote = (hasMoho && !isVerified) ? '<div class="pending-text">(Pending verification)</div>' : '';
-            
-            // Get both headshots
-            const mohoHeadshot = row.data?.mohoAinaHeadshot?.trim() || '';
-            const incumbentHeadshot = row.data?.incumbentHeadshot?.trim() || '';
-            
-            // Get both websites
-            let mohoWebsite = row.data?.mohoAinaWebsite || '';
-            if (mohoWebsite && !mohoWebsite.match(/^https?:\/\//i)) {
-                mohoWebsite = 'https://' + mohoWebsite;
+            // For Maui/Kauai (every-voter-elects-every-seat), nest the at-large
+            // banner + expander inside the County Council card itself.
+            let extras = '';
+            if (row.id === 'county' && countyName && AT_LARGE_COUNTIES[countyName]) {
+                extras = buildAtLargeExtras(countyName, row.districtId);
             }
-            
-            let incumbentWebsite = row.data?.incumbentWebsite || '';
-            if (incumbentWebsite && !incumbentWebsite.match(/^https?:\/\//i)) {
-                incumbentWebsite = 'https://' + incumbentWebsite;
-            }
-            
-            // Build display names
-            const mohoDisplayName = row.data?.mohoAina || '';
-            const incumbentDisplayName = row.data?.name || 'Unknown';
-            
-            // Add district number to office name
-            const officeWithDistrict = row.districtId ? `${row.office} ${row.districtId}` : row.office;
-            
-            // Build card HTML
-            if (isSamePerson) {
-                // Special case: Moho ʻĀina IS the incumbent
-                const headshot = mohoHeadshot || incumbentHeadshot;
-                const ovalStyle = headshot ? 
-                    `class="rep-oval" style="background-image: url('${headshot}')"` : 
-                    `class="rep-oval"`;
-                
-                const nameLink = mohoWebsite ? 
-                    `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>` : 
-                    mohoDisplayName;
-                
-                html += `
-                    <div class="rep-row has-moho ${verifiedClass}" id="${cardId}">
+            html += buildRepCardHTML(row, extras);
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    // Renders a single representative card. If extrasHTML is provided, it is
+    // nested inside the same .rep-row container (used for at-large counties so
+    // the banner + expander are visually part of the council card).
+    function buildRepCardHTML(row, extrasHTML = '') {
+        const hasMoho = row.data && row.data.mohoAina;
+        const mohoName = normalizeName(row.data?.mohoAina);
+        const incumbentName = normalizeName(row.data?.name);
+        const isSamePerson = hasMoho && mohoName && incumbentName && mohoName === incumbentName;
+
+        const cardId = `card-${row.id}-${row.districtId || 'ocean'}`;
+
+        const isVerified = row.data?.verified === true;
+        const verifiedClass = (hasMoho && !isVerified) ? 'unverified' : '';
+        const verifiedBadge = isVerified ? '<span class="verified-badge">✓ Verified</span>' : '';
+        const pendingNote = (hasMoho && !isVerified) ? '<div class="pending-text">(Pending verification)</div>' : '';
+
+        const mohoHeadshot = row.data?.mohoAinaHeadshot?.trim() || '';
+        const incumbentHeadshot = row.data?.incumbentHeadshot?.trim() || '';
+
+        let mohoWebsite = row.data?.mohoAinaWebsite || '';
+        if (mohoWebsite && !mohoWebsite.match(/^https?:\/\//i)) {
+            mohoWebsite = 'https://' + mohoWebsite;
+        }
+
+        let incumbentWebsite = row.data?.incumbentWebsite || '';
+        if (incumbentWebsite && !incumbentWebsite.match(/^https?:\/\//i)) {
+            incumbentWebsite = 'https://' + incumbentWebsite;
+        }
+
+        const mohoDisplayName = row.data?.mohoAina || '';
+        const incumbentDisplayName = row.data?.name || 'Unknown';
+
+        const officeWithDistrict = row.districtId ? `${row.office} ${row.districtId}` : row.office;
+
+        const extrasBlock = extrasHTML ? `<div class="at-large-section">${extrasHTML}</div>` : '';
+        const extrasClass = extrasHTML ? ' has-extras' : '';
+
+        if (isSamePerson) {
+            const headshot = mohoHeadshot || incumbentHeadshot;
+            const ovalStyle = headshot
+                ? `class="rep-oval" style="background-image: url('${headshot}')"`
+                : `class="rep-oval"`;
+
+            const nameLink = mohoWebsite
+                ? `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>`
+                : mohoDisplayName;
+
+            return `
+                <div class="rep-row has-moho ${verifiedClass}${extrasClass}" id="${cardId}">
+                    <div class="rep-main">
                         <div ${ovalStyle}></div>
                         <div class="rep-info">
                             <div class="rep-level">${officeWithDistrict}</div>
@@ -1178,29 +1326,33 @@
                             ${pendingNote}
                         </div>
                     </div>
-                `;
-            } else if (hasMoho) {
-                // Has Moho ʻĀina - show toggle functionality
-                const mohoOvalStyle = mohoHeadshot ? 
-                    `style="background-image: url('${mohoHeadshot}')"` : '';
-                
-                // Incumbent photo needs display:none AND background-image in one style attribute
-                let incumbentOvalStyle = 'style="display:none; position:absolute; left:24px;';
-                if (incumbentHeadshot) {
-                    incumbentOvalStyle += ` background-image: url('${incumbentHeadshot}');`;
-                }
-                incumbentOvalStyle += '"';
-                
-                const mohoNameLink = mohoWebsite ? 
-                    `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>` : 
-                    mohoDisplayName;
-                
-                const incumbentNameLink = incumbentWebsite ? 
-                    `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>` : 
-                    incumbentDisplayName;
-                
-                html += `
-                    <div class="rep-row has-moho ${verifiedClass}" id="${cardId}" data-view="moho">
+                    ${extrasBlock}
+                </div>
+            `;
+        }
+
+        if (hasMoho) {
+            const mohoOvalStyle = mohoHeadshot
+                ? `style="background-image: url('${mohoHeadshot}')"`
+                : '';
+
+            let incumbentOvalStyle = 'style="display:none; position:absolute; left:24px;';
+            if (incumbentHeadshot) {
+                incumbentOvalStyle += ` background-image: url('${incumbentHeadshot}');`;
+            }
+            incumbentOvalStyle += '"';
+
+            const mohoNameLink = mohoWebsite
+                ? `<a href="${mohoWebsite}" target="_blank">${mohoDisplayName}</a>`
+                : mohoDisplayName;
+
+            const incumbentNameLink = incumbentWebsite
+                ? `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>`
+                : incumbentDisplayName;
+
+            return `
+                <div class="rep-row has-moho ${verifiedClass}${extrasClass}" id="${cardId}" data-view="moho">
+                    <div class="rep-main">
                         <div class="rep-oval moho-photo" ${mohoOvalStyle}></div>
                         <div class="rep-oval incumbent-photo" ${incumbentOvalStyle}></div>
                         <div class="rep-info">
@@ -1213,40 +1365,84 @@
                                 <button class="toggle-button show-incumbent" onclick="toggleCard('${cardId}', 'incumbent')">See Current Politician</button>
                             </div>
                             <div class="incumbent-view" style="display:none;">
-                                <div class="rep-status">Current Politician- Moho ʻĀina Needed</div>
+                                <div class="rep-status">Current Politician</div>
                                 <div class="rep-name">${incumbentNameLink}</div>
                                 <button class="toggle-button show-moho" onclick="toggleCard('${cardId}', 'moho')">See Current Moho ʻĀina</button>
                             </div>
                         </div>
                     </div>
-                `;
-            } else {
-                // No Moho ʻĀina - standard gray card with nomination button
-                const ovalStyle = incumbentHeadshot ? 
-                    `class="rep-oval" style="background-image: url('${incumbentHeadshot}')"` : 
-                    `class="rep-oval"`;
-                
-                const nameLink = incumbentWebsite ? 
-                    `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>` : 
-                    incumbentDisplayName;
-                
-                html += `
-                    <div class="rep-row no-moho" id="${cardId}">
-                        <div ${ovalStyle}></div>
-                        <div class="rep-info">
-                            <div class="rep-level">${officeWithDistrict}</div>
-                            <hr class="rep-divider">
-                            <div class="rep-status">Current Politician- Moho ʻĀina Needed</div>
-                            <div class="rep-name">${nameLink}</div>
-                            <a href="https://mohoaina.com/nomination-form" target="_blank" class="nominate-button">Nominate a Moho ʻĀina</a>
-                        </div>
-                    </div>
-                `;
-            }
+                    ${extrasBlock}
+                </div>
+            `;
         }
-        
+
+        const ovalStyle = incumbentHeadshot
+            ? `class="rep-oval" style="background-image: url('${incumbentHeadshot}')"`
+            : `class="rep-oval"`;
+
+        const nameLink = incumbentWebsite
+            ? `<a href="${incumbentWebsite}" target="_blank">${incumbentDisplayName}</a>`
+            : incumbentDisplayName;
+
+        return `
+            <div class="rep-row no-moho${extrasClass}" id="${cardId}">
+                <div class="rep-main">
+                    <div ${ovalStyle}></div>
+                    <div class="rep-info">
+                        <div class="rep-level">${officeWithDistrict}</div>
+                        <hr class="rep-divider">
+                        <div class="rep-status">Current Politician- Moho ʻĀina Needed</div>
+                        <div class="rep-name">${nameLink}</div>
+                        <a href="https://mohoaina.com/nomination-form" target="_blank" class="nominate-button">Nominate a Moho ʻĀina</a>
+                    </div>
+                </div>
+                ${extrasBlock}
+            </div>
+        `;
+    }
+
+    // Returns the inner contents of the at-large section (banner + optional expander
+    // + hidden extras). The wrapping .at-large-section div is added by buildRepCardHTML.
+    function buildAtLargeExtras(countyName, currentDistrictId) {
+        const totalSeats = AT_LARGE_COUNTIES[countyName];
+        const seatWord = { 7: 'seven', 9: 'nine' }[totalSeats] || String(totalSeats);
+
+        let html = `<div class="at-large-banner">Remember— you can vote for all ${seatWord}!!!</div>`;
+
+        const allRows = sheetData[countyName] || {};
+        const otherDistrictIds = Object.keys(allRows).filter(id => String(id) !== String(currentDistrictId));
+
+        if (otherDistrictIds.length === 0) return html;
+
+        otherDistrictIds.sort((a, b) => Number(a) - Number(b));
+
+        const containerId = `at-large-extras-${countyName}`;
+        html += `<button class="at-large-toggle" id="at-large-toggle-${countyName}" onclick="toggleAtLarge('${countyName}')">See all ${totalSeats} at-large seats</button>`;
+        html += `<div class="at-large-extras" id="${containerId}">`;
+        for (const districtId of otherDistrictIds) {
+            html += buildRepCardHTML({
+                office: 'County Council',
+                districtId: districtId,
+                data: allRows[districtId],
+                id: 'county'
+            });
+        }
         html += '</div>';
         return html;
+    }
+
+    function toggleAtLarge(countyName) {
+        const container = document.getElementById(`at-large-extras-${countyName}`);
+        const button = document.getElementById(`at-large-toggle-${countyName}`);
+        if (!container || !button) return;
+
+        const willOpen = !container.classList.contains('open');
+        container.classList.toggle('open', willOpen);
+
+        const totalSeats = AT_LARGE_COUNTIES[countyName];
+        button.textContent = willOpen
+            ? `Hide other ${totalSeats - 1} seats`
+            : `See all ${totalSeats} at-large seats`;
     }
     
     // Toggle card between Moho ʻĀina and incumbent view
@@ -1535,7 +1731,7 @@
         }
         
         // Create content for sidebar
-        const resultsContent = createPopupContent(countyInfo, countyDistrictId, houseInfo, houseDistrictId, senateInfo, senateDistrictId);
+        const resultsContent = createPopupContent(countyInfo, countyDistrictId, houseInfo, houseDistrictId, senateInfo, senateDistrictId, countyName);
         
         // Display in sidebar
         const resultsContainer = document.getElementById('results-container');
