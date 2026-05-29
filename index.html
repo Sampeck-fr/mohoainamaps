@@ -59,12 +59,23 @@
             min-width: 300px;
             max-width: 60%;
             height: 100vh;
+            height: 100dvh;
             background: white;
             z-index: 1000;
             display: flex;
             flex-direction: column;
             box-shadow: 2px 0 10px rgba(0,0,0,0.3);
             transition: left 0.5s ease;
+        }
+
+        /* Close-panel (X) — visible only on mobile when sidebar is open */
+        #close-panel {
+            display: none;
+        }
+
+        /* Reopen FAB — visible only on mobile when sidebar has been closed */
+        #reopen-panel {
+            display: none;
         }
         
         #side-panel.visible {
@@ -165,6 +176,16 @@
             transition: all 0.5s ease;
             flex: 1;
         }
+
+        /* Constrain the inner <input> the Google component renders so that on
+           focus it can't expand beyond its container and push the search button
+           off-screen on mobile. */
+        gmp-place-autocomplete input {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            font-size: 16px !important;
+        }
         
         #search-container.centered gmp-place-autocomplete {
             width: 500px !important;
@@ -211,6 +232,7 @@
             top: 0;
             width: 100%;
             height: 100vh;
+            height: 100dvh;
             transition: left 0.5s ease, width 0.5s ease;
         }
         
@@ -631,16 +653,76 @@
                 max-width: 100% !important;
                 left: -100% !important;
             }
-            
+
             #side-panel.visible {
                 left: 0 !important;
             }
-            
+
+            /* On mobile the sidebar fully covers the map; don't also shift the
+               map under it (so when the user closes the sidebar via the X, the
+               map is already in its full-width position). */
+            #map.with-sidebar {
+                left: 0;
+                width: 100%;
+            }
+
+            /* Close (X) button — shown only once results are visible. */
+            #side-panel.visible #close-panel {
+                display: flex;
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                z-index: 1100;
+                width: 40px;
+                height: 40px;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.95);
+                color: var(--black);
+                border: 2px solid var(--gray-medium);
+                font-size: 24px;
+                font-weight: 700;
+                line-height: 1;
+                padding: 0;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            }
+            /* Hide close button while we're in the initial centered-search state
+               (no results yet — nothing to "close back to"). */
+            #side-panel:not(.has-results) #close-panel {
+                display: none;
+            }
+
+            /* Reopen FAB — bottom-center, shown after user closes the panel. */
+            #reopen-panel.visible {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1500;
+                padding: 14px 24px;
+                background: var(--green-vibrant);
+                color: var(--white);
+                border: 2px solid var(--green-dark);
+                border-radius: 30px;
+                font-family: var(--font-display);
+                font-weight: 700;
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                box-shadow: 0 6px 20px rgba(0, 200, 83, 0.4);
+                cursor: pointer;
+            }
+
             /* Hide resize handle on mobile */
             #resize-handle {
                 display: none;
             }
-            
+
             /* Search at top on mobile, not centered */
             #search-container.centered {
                 position: fixed;
@@ -654,6 +736,15 @@
                 background: white;
                 border-radius: 8px;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            }
+
+            /* Stack the input above the button so the autocomplete actually has
+               horizontal room (in flex row, flex:1 + width:100% on siblings
+               collapses the input to 0px and pushes the button off-frame). */
+            #search-container.centered #search-input-container {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
             }
             
             #search-title {
@@ -792,6 +883,7 @@
 
 <div id="side-panel">
     <div id="resize-handle"></div>
+    <button id="close-panel" type="button" aria-label="Close panel">&times;</button>
     <div id="search-container" class="centered">
         <div id="search-title">Find Your Moho ʻĀina</div>
         <div id="search-input-container">
@@ -803,6 +895,8 @@
         <!-- Results will be inserted here -->
     </div>
 </div>
+
+<button id="reopen-panel" type="button" aria-label="Reopen panel">Find Your Reps</button>
 
 <div id="map"></div>
 
@@ -843,36 +937,73 @@
     // ============ ACTIVATE SIDEBAR ============
     
     function activateSidebar() {
-        if (hasActivatedSidebar) return;
-        
-        hasActivatedSidebar = true;
-        
-        // Move search to sidebar
-        const searchContainer = document.getElementById('search-container');
-        searchContainer.classList.remove('centered');
-        
-        // Show sidebar
         const sidePanel = document.getElementById('side-panel');
-        sidePanel.classList.add('visible');
-        
-        // Adjust map
         const mapElement = document.getElementById('map');
-        mapElement.classList.add('with-sidebar');
-        
-        // Update PlaceAutocomplete width if it exists
-        if (placeAutocomplete) {
-            setTimeout(() => {
-                placeAutocomplete.style.width = '100%';
-                placeAutocomplete.style.padding = '12px';
-                placeAutocomplete.style.fontSize = '16px';
-            }, 100);
+        const reopenBtn = document.getElementById('reopen-panel');
+
+        // First-time activation only: shift the search out of its centered
+        // modal position into the sidebar, and style the autocomplete to its
+        // sidebar size.
+        if (!hasActivatedSidebar) {
+            hasActivatedSidebar = true;
+
+            const searchContainer = document.getElementById('search-container');
+            searchContainer.classList.remove('centered');
+
+            if (placeAutocomplete) {
+                setTimeout(() => {
+                    placeAutocomplete.style.width = '100%';
+                    placeAutocomplete.style.padding = '12px';
+                    placeAutocomplete.style.fontSize = '16px';
+                }, 100);
+            }
         }
-        
+
+        // Every call: ensure the sidebar is visible. This matters when the
+        // user has previously closed the panel via the X on mobile and is
+        // now interacting with the map again.
+        sidePanel.classList.add('visible');
+        sidePanel.classList.add('has-results');
+        mapElement.classList.add('with-sidebar');
+        if (reopenBtn) reopenBtn.classList.remove('visible');
+
         // Invalidate map size after transition
         setTimeout(() => {
             if (window.mapInstance) {
                 window.mapInstance.invalidateSize();
             }
+        }, 500);
+    }
+
+    // ============ CLOSE / REOPEN SIDEBAR (mobile) ============
+
+    function closeSidebar() {
+        const sidePanel = document.getElementById('side-panel');
+        sidePanel.classList.remove('visible');
+
+        const mapElement = document.getElementById('map');
+        mapElement.classList.remove('with-sidebar');
+
+        const reopenBtn = document.getElementById('reopen-panel');
+        if (reopenBtn) reopenBtn.classList.add('visible');
+
+        setTimeout(() => {
+            if (window.mapInstance) window.mapInstance.invalidateSize();
+        }, 500);
+    }
+
+    function reopenSidebar() {
+        const sidePanel = document.getElementById('side-panel');
+        sidePanel.classList.add('visible');
+
+        const mapElement = document.getElementById('map');
+        mapElement.classList.add('with-sidebar');
+
+        const reopenBtn = document.getElementById('reopen-panel');
+        if (reopenBtn) reopenBtn.classList.remove('visible');
+
+        setTimeout(() => {
+            if (window.mapInstance) window.mapInstance.invalidateSize();
         }, 500);
     }
     
@@ -1922,7 +2053,13 @@
         
         // Set up event listeners
         document.getElementById('search-button').addEventListener('click', () => handleSearch());
-        
+
+        // Close / reopen sidebar (mobile)
+        const closeBtn = document.getElementById('close-panel');
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        const reopenBtn = document.getElementById('reopen-panel');
+        if (reopenBtn) reopenBtn.addEventListener('click', reopenSidebar);
+
         // Add map click event listener
         map.on('click', function(e) {
             console.log('Map clicked at:', e.latlng);
