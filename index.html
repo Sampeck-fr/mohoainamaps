@@ -877,6 +877,77 @@
                 font-size: 14px !important;
             }
         }
+
+        /* ============ DISTRICT LAYER TOGGLES ============ */
+        #layer-toggles {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--black);
+            color: var(--white);
+            border: 3px solid var(--white);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 10px 25px rgba(0,0,0,0.35);
+            padding: 14px 16px;
+            font-family: var(--font-body);
+            min-width: 200px;
+        }
+
+        #layer-toggles h4 {
+            margin: 0 0 10px;
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--white);
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(255,255,255,0.25);
+        }
+
+        #layer-toggles label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            user-select: none;
+        }
+
+        #layer-toggles input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--green-vibrant);
+            margin: 0;
+        }
+
+        #layer-toggles .swatch {
+            display: inline-block;
+            width: 18px;
+            height: 4px;
+            margin-left: auto;
+            border-radius: 2px;
+        }
+
+        #layer-toggles .swatch.house  { background: #00E676; }
+        #layer-toggles .swatch.senate { background: #FFD600; }
+        #layer-toggles .swatch.county { background: #FF1744; }
+
+        @media (max-width: 768px) {
+            #layer-toggles {
+                top: auto;
+                bottom: 90px;
+                right: 12px;
+                min-width: 0;
+                padding: 10px 12px;
+            }
+            #layer-toggles h4 { font-size: 10px; margin-bottom: 6px; }
+            #layer-toggles label { font-size: 12px; padding: 4px 0; gap: 8px; }
+        }
     </style>
 </head>
 <body>
@@ -897,6 +968,13 @@
 </div>
 
 <button id="reopen-panel" type="button" aria-label="Reopen panel">Find Your Reps</button>
+
+<div id="layer-toggles">
+    <h4>Districts</h4>
+    <label><input type="checkbox" id="toggle-house">  State House  <span class="swatch house"></span></label>
+    <label><input type="checkbox" id="toggle-senate"> State Senate <span class="swatch senate"></span></label>
+    <label><input type="checkbox" id="toggle-county"> County      <span class="swatch county"></span></label>
+</div>
 
 <div id="map"></div>
 
@@ -1273,6 +1351,10 @@
     // ============ LOAD GEOJSON LAYERS ============
     
     async function loadGeoJsonLayers() {
+        const houseStyle  = { fillOpacity: 0, color: '#00E676', weight: 2, opacity: 0.9 };
+        const senateStyle = { fillOpacity: 0, color: '#FFD600', weight: 2, opacity: 0.9 };
+        const countyStyle = { fillOpacity: 0, color: '#FF1744', weight: 2, opacity: 0.9 };
+
         // Load county layers
         const countyFiles = [
             { file: 'Hawaii County.geojson', county: 'hawaii' },
@@ -1280,43 +1362,62 @@
             { file: 'Honolulu County.geojson', county: 'honolulu' },
             { file: 'Kauai County.geojson', county: 'kauai' }
         ];
-        
+
         for (const {file, county} of countyFiles) {
             try {
                 const response = await fetch(file);
                 const data = await response.json();
-                const layer = L.geoJSON(data, {
-                    style: { fillOpacity: 0, color: '#333', weight: 1 }
-                });
+                const layer = L.geoJSON(data, { style: countyStyle });
                 geoJsonLayers.county.push({ layer, data, county });
             } catch (error) {
                 console.error(`Error loading ${file}:`, error);
             }
         }
-        
+
         // Load House
         try {
             const response = await fetch('House.geojson?v=' + Date.now());
             const data = await response.json();
             geoJsonLayers.house = {
-                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                layer: L.geoJSON(data, { style: houseStyle }),
                 data
             };
         } catch (error) {
             console.error('Error loading House:', error);
         }
-        
+
         // Load Senate
         try {
             const response = await fetch('Senate.geojson');
             const data = await response.json();
             geoJsonLayers.senate = {
-                layer: L.geoJSON(data, { style: { fillOpacity: 0, color: '#333', weight: 1 } }),
+                layer: L.geoJSON(data, { style: senateStyle }),
                 data
             };
         } catch (error) {
             console.error('Error loading Senate:', error);
         }
+    }
+
+    // ============ DISTRICT LAYER TOGGLES ============
+
+    function initLayerToggles() {
+        const wire = (checkboxId, getLayers) => {
+            const cb = document.getElementById(checkboxId);
+            if (!cb) return;
+            cb.addEventListener('change', () => {
+                const layers = getLayers();
+                for (const layer of layers) {
+                    if (!layer) continue;
+                    if (cb.checked) layer.addTo(map);
+                    else map.removeLayer(layer);
+                }
+            });
+        };
+
+        wire('toggle-house',  () => [geoJsonLayers.house?.layer]);
+        wire('toggle-senate', () => [geoJsonLayers.senate?.layer]);
+        wire('toggle-county', () => geoJsonLayers.county.map(c => c.layer));
     }
     
     // ============ FIND DISTRICT BY POINT ============
@@ -2045,7 +2146,10 @@
             loadSheetData(),
             loadGeoJsonLayers()
         ]);
-        
+
+        // Wire district overlay toggles (House / Senate / County)
+        initLayerToggles();
+
         // Initialize Google Places Autocomplete if Google Maps loaded
         if (typeof google !== 'undefined' && google.maps) {
             await initAutocomplete();
